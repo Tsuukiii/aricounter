@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MONTREAL DUTY FREE — Cash Counter</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  
+  <header class="app-header">
+    <div class="branding-left">
+      <div class="branding">
+        <div class="logo-image">
+  <img src="montreallogo.png" alt="Montreal Duty Free Logo">
+</div>
+
+        <div>
+          <h1>MONTREAL DUTY FREE</h1>
+          <p class="subtitle">AER RIANTA ITL</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="langToggle" class="btn ghost">FR</button>
+        <button id="printBtn" class="btn secondary">Print</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Session Info -->
+    <section class="card">
+      <h2>Session Info</h2>
+      <div class="grid">
+        <label class="field">
+          <span>Head Cashier Name</span>
+          <input id="cashierName" type="text" placeholder="Your full name" />
+        </label>
+        <label class="field">
+          <span>Date</span>
+          <input id="countDate" type="date" />
+        </label>
+        <label class="field">
+          <span>Store</span>
+          <select id="store">
+            <option>International</option>
+            <option>Transborder</option>
+            <option>Jetty</option>
+            <option>Value Store</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Cashiers (who used the cash)</span>
+          <input id="cashiersList" type="text" placeholder="Comma-separated e.g., Samira, Alex" />
+        </label>
+        <label class="field">
+          <span>Cash Number</span>
+          <input id="cashNumber" type="text" placeholder="e.g., Cash #1" />
+        </label>
+      </div>
+    </section>
+
+    <!-- Denominations -->
+    <section class="card">
+      <div class="card-header">
+        <h2>Denominations</h2>
+        <div class="row gap">
+          <label class="toggle"><input type="checkbox" id="enableCAD" checked> <span>CAD</span></label>
+          <label class="toggle"><input type="checkbox" id="enableUSD"> <span>USD</span></label>
+          <label class="toggle"><input type="checkbox" id="enableEUR"> <span>EUR</span></label>
+        </div>
+      </div>
+      <div id="denomSections" class="denom-wrapper"></div>
+    </section>
+
+    <!-- Totals -->
+    <section class="card">
+      <h2>Totals</h2>
+      <div class="totals-grid">
+        <div class="tot">
+          <span>Overall Counted (Denoms + Deposits)</span>
+          <strong id="countedTotal">0.00</strong>
+        </div>
+
+        <!-- CAD -->
+        <div class="tot">
+          <span>CAD Counted</span>
+          <strong id="cadTotal">0.00</strong>
+          <label class="field compact">
+            <span>CAD Reported</span>
+            <input id="reportedCAD" type="number" step="0.01" placeholder="0.00" />
+          </label>
+          <div class="field compact">
+            <span>CAD Difference</span>
+            <strong id="cadDiff">0.00</strong>
+          </div>
+        </div>
+
+        <!-- USD -->
+        <div class="tot">
+          <span>USD Counted</span>
+          <strong id="usdTotal">0.00</strong>
+          <label class="field compact">
+            <span>USD Reported</span>
+            <input id="reportedUSD" type="number" step="0.01" placeholder="0.00" />
+          </label>
+          <div class="field compact">
+            <span>USD Difference</span>
+            <strong id="usdDiff">0.00</strong>
+          </div>
+        </div>
+
+        <!-- EUR -->
+        <div class="tot">
+          <span>EUR Counted</span>
+          <strong id="eurTotal">0.00</strong>
+          <label class="field compact">
+            <span>EUR Reported</span>
+            <input id="reportedEUR" type="number" step="0.01" placeholder="0.00" />
+          </label>
+          <div class="field compact">
+            <span>EUR Difference</span>
+            <strong id="eurDiff">0.00</strong>
+          </div>
+        </div>
+
+        <!-- Card Difference -->
+        <div class="tot">
+          <label class="field compact">
+            <span>Card Difference (info only)</span>
+            <input id="cardDifference" type="number" step="0.01" placeholder="0.00" />
+          </label>
+        </div>
+
+        <!-- Reconciled Difference -->
+        <div class="tot">
+          <span>Reconciled Difference (CAD + USD + EUR)</span>
+          <strong id="recDiff">0.00</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Actions -->
+    <section class="card actions">
+      <button id="depositBtn" class="btn">+ Deposit</button>
+      <button id="resetBtn" class="btn danger">Reset</button>
+      <button id="exportCsvBtn" class="btn">Export CSV</button>
+      <button id="exportPdfBtn" class="btn primary">Export PDF</button>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
