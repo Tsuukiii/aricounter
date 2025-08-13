@@ -9,17 +9,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-  
   <header class="app-header">
     <div class="branding-left">
       <div class="branding">
         <div class="logo-image">
-  <img src="montreallogo.png" alt="Montreal Duty Free Logo">
-</div>
-
+          <img src="montreallogo.png" alt="Montreal Duty Free Logo">
+        </div>
         <div>
           <h1>MONTREAL DUTY FREE</h1>
-          <p class="subtitle">AER RIANTA ITL</p>
+          <p class="subtitle">AerRianta Intl NA </p>
         </div>
       </div>
       <div class="header-actions">
@@ -35,7 +33,7 @@
       <h2>Session Info</h2>
       <div class="grid">
         <label class="field">
-          <span>Head Cashier Name</span>
+          <span>Head Cashier/Manager Name</span>
           <input id="cashierName" type="text" placeholder="Your full name" />
         </label>
         <label class="field">
@@ -79,17 +77,14 @@
     <section class="card">
       <h2>Totals</h2>
       <div class="totals-grid">
-        <div class="tot">
-          <span>Overall Counted (Denoms + Deposits)</span>
-          <strong id="countedTotal">0.00</strong>
-        </div>
+        <!-- Removed "Overall Counted (Denoms + Deposits)" on purpose -->
 
         <!-- CAD -->
         <div class="tot">
           <span>CAD Counted</span>
           <strong id="cadTotal">0.00</strong>
           <label class="field compact">
-            <span>CAD Reported</span>
+            <span>CAD Reported (Z report)</span>
             <input id="reportedCAD" type="number" step="0.01" placeholder="0.00" />
           </label>
           <div class="field compact">
@@ -103,7 +98,7 @@
           <span>USD Counted</span>
           <strong id="usdTotal">0.00</strong>
           <label class="field compact">
-            <span>USD Reported</span>
+            <span>USD Reported (Z report)</span>
             <input id="reportedUSD" type="number" step="0.01" placeholder="0.00" />
           </label>
           <div class="field compact">
@@ -117,7 +112,7 @@
           <span>EUR Counted</span>
           <strong id="eurTotal">0.00</strong>
           <label class="field compact">
-            <span>EUR Reported</span>
+            <span>EUR Reported (Z report)</span>
             <input id="reportedEUR" type="number" step="0.01" placeholder="0.00" />
           </label>
           <div class="field compact">
@@ -126,7 +121,7 @@
           </div>
         </div>
 
-        <!-- Card Difference -->
+        <!-- Card Difference (optional info) -->
         <div class="tot">
           <label class="field compact">
             <span>Card Difference (info only)</span>

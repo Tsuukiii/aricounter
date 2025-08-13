@@ -6,7 +6,7 @@ function el(id){ return document.getElementById(id); }
 const I18N = {
   en: {
     sessionInfo: "Session Info",
-    headCashier: "Head Cashier Name",
+    headCashier: "Head Cashier/Manager Name", // UPDATED
     date: "Date",
     store: "Store",
     cashiers: "Cashiers (who used the cash)",
@@ -43,7 +43,7 @@ const I18N = {
   },
   fr: {
     sessionInfo: "Infos de session",
-    headCashier: "Nom du chef caissier",
+    headCashier: "Nom du chef caissier/gestionnaire", // UPDATED
     date: "Date",
     store: "Magasin",
     cashiers: "Caissiers (ayant utilisé la caisse)",
@@ -141,10 +141,8 @@ function init(){
   const printBtn = el('printBtn'); if(printBtn) printBtn.addEventListener('click', ()=>window.print());
   const depBtn = el('depositBtn'); if(depBtn) depBtn.addEventListener('click', addDepositByCurrency);
   el('resetBtn').addEventListener('click', () => {
-  if (confirm("Are you sure you want to reset?")) {
-    resetAll();
-  }
-});
+    if (confirm("Are you sure you want to reset?")) { resetAll(); }
+  });
 
   const csvBtn = el('exportCsvBtn'); if(csvBtn) csvBtn.addEventListener('click', exportCSV);
   const pdfBtn = el('exportPdfBtn'); if(pdfBtn) pdfBtn.addEventListener('click', exportPDF);
@@ -190,9 +188,7 @@ function applyLanguage(lang){
   });
 }
 
-function toggleLanguage(){
-  applyLanguage(currentLang === 'en' ? 'fr' : 'en');
-}
+function toggleLanguage(){ applyLanguage(currentLang === 'en' ? 'fr' : 'en'); }
 
 function setLabelForInput(inputId, text){
   const input = el(inputId);
@@ -202,7 +198,6 @@ function setLabelForInput(inputId, text){
   const span = label.querySelector("span");
   if(span) span.textContent = text;
 }
-
 function setButtonText(id, text){ const b = el(id); if(b) b.textContent = text; }
 
 // ===== UI: Denomination Sections =====
@@ -224,37 +219,47 @@ function denomSection(currency){
   });
 
   state.currencies[currency].rows.forEach(row=>{
+    // Denomination (READ-ONLY)
     const labelCell = document.createElement('div');
     labelCell.className = 'cell';
     const labelInput = document.createElement('input');
     labelInput.value = row.label;
-    labelInput.addEventListener('input', e=>{ row.label = e.target.value; });
+    labelInput.readOnly = true;
+    labelInput.tabIndex = -1;
     labelCell.appendChild(labelInput);
 
+    // Qty (NUMBERS ONLY)
     const qtyCell = document.createElement('div');
     qtyCell.className = 'cell';
     const qtyInput = document.createElement('input');
-    qtyInput.type = 'number'; qtyInput.min='0'; qtyInput.step='1';
+    qtyInput.type = 'number'; qtyInput.min='0'; qtyInput.step='1'; qtyInput.inputMode='numeric';
     qtyInput.value = row.qty;
+
+    // prevent e/E/+/-/. and mouse wheel changes
+    qtyInput.addEventListener('keydown', e=>{
+      if (['e','E','+','-','.'].includes(e.key)) e.preventDefault();
+    });
+    qtyInput.addEventListener('wheel', e=>{ e.preventDefault(); e.target.blur(); }, {passive:false});
     qtyInput.addEventListener('input', e=>{
+      // strip non-digits
+      e.target.value = e.target.value.replace(/[^\d]/g,'');
       row.qty = Number(e.target.value||0);
       row.total = row.qty * Number(row.value||0);
       calcTotals(); lineTotal.textContent = fmt(row.total);
     });
     qtyCell.appendChild(qtyInput);
 
+    // Value (READ-ONLY)
     const valueCell = document.createElement('div');
     valueCell.className = 'cell';
     const valueInput = document.createElement('input');
-    valueInput.type = 'number'; valueInput.step='0.01';
+    valueInput.type = 'number';
     valueInput.value = row.value;
-    valueInput.addEventListener('input', e=>{
-      row.value = Number(e.target.value||0);
-      row.total = row.qty * Number(row.value||0);
-      calcTotals(); lineTotal.textContent = fmt(row.total);
-    });
+    valueInput.readOnly = true;
+    valueInput.tabIndex = -1;
     valueCell.appendChild(valueInput);
 
+    // Line total (read-only display)
     const totalCell = document.createElement('div');
     totalCell.className = 'cell';
     const lineTotal = document.createElement('div');
@@ -311,14 +316,13 @@ function calcTotals(){
     state.diffsByCurrency[cur] = Number(state.reportedByCurrency[cur]||0) - countedByCur[cur];
   });
 
-  // Overall counted total
+  // Overall counted total (kept in state for exports; UI element removed)
   state.countedTotal = countedByCur.CAD + countedByCur.USD + countedByCur.EUR;
 
-  // Reconciled difference
+  // Reconciled difference (sum of per-currency diffs)
   state.reconciledDifference = state.diffsByCurrency.CAD + state.diffsByCurrency.USD + state.diffsByCurrency.EUR;
 
-  // Update UI
-  const countedTotalEl = el('countedTotal'); if(countedTotalEl) countedTotalEl.textContent = fmt(state.countedTotal);
+  // Update visible UI (all null-safe)
   const cadTotalEl = el('cadTotal'); if(cadTotalEl) cadTotalEl.textContent = fmt(countedByCur.CAD);
   const usdTotalEl = el('usdTotal'); if(usdTotalEl) usdTotalEl.textContent = fmt(countedByCur.USD);
   const eurTotalEl = el('eurTotal'); if(eurTotalEl) eurTotalEl.textContent = fmt(countedByCur.EUR);
@@ -398,7 +402,7 @@ function exportCSV(){
   rows.push(['Company','MONTREAL DUTY FREE']);
   rows.push(['Sous-name','AER RIANTA ITL']);
   rows.push(['Store', el('store').value]);
-  rows.push(['Head Cashier', el('cashierName').value]);
+  rows.push(['Head Cashier/Manager Name', el('cashierName').value]); // UPDATED
   rows.push(['Date', el('countDate').value]);
   rows.push(['Cashiers', el('cashiersList').value]);
   rows.push(['Cash Number', state.cashNumber]);
@@ -434,12 +438,12 @@ function exportCSV(){
   ['CAD','USD','EUR'].forEach(cur=>{
     const counted = (state.denomTotals[cur] + state.depositTotals[cur]).toFixed(2);
     rows.push([`${cur} Counted`, counted]);
-    rows.push([`${cur} Reported`, Number(state.reportedByCurrency[cur]||0).toFixed(2)]);
+    rows.push([`${cur} Reported (Z report)`, Number(state.reportedByCurrency[cur]||0).toFixed(2)]); // UPDATED
     rows.push([`${cur} Difference (Reported - Counted)`, state.diffsByCurrency[cur].toFixed(2)]);
     rows.push([]);
   });
 
-  // Overall
+  // Overall (kept in export)
   const denomAll = state.denomTotals.CAD + state.denomTotals.USD + state.denomTotals.EUR;
   const depositsAll = state.depositTotals.CAD + state.depositTotals.USD + state.depositTotals.EUR;
 
@@ -469,7 +473,7 @@ function exportPDF(){
   doc.setFontSize(12);
   doc.text(`Sous-name: AER RIANTA ITL`, 10, y); y += 6;
   doc.text(`Store: ${el('store').value}`, 10, y); y += 6;
-  doc.text(`Head Cashier: ${el('cashierName').value}`, 10, y); y += 6;
+  doc.text(`Head Cashier/Manager Name: ${el('cashierName').value}`, 10, y); y += 6; // UPDATED
   doc.text(`Date: ${el('countDate').value}`, 10, y); y += 6;
   doc.text(`Cashiers: ${el('cashiersList').value}`, 10, y); y += 6;
   doc.text(`Cash Number: ${state.cashNumber}`, 10, y); y += 10;
@@ -507,12 +511,12 @@ function exportPDF(){
   ['CAD','USD','EUR'].forEach(cur=>{
     const counted = state.denomTotals[cur] + state.depositTotals[cur];
     doc.text(`${cur} Counted: ${fmt(counted)}`, 10, y); y += 6;
-    doc.text(`${cur} Reported: ${fmt(state.reportedByCurrency[cur]||0)}`, 10, y); y += 6;
+    doc.text(`${cur} Reported (Z report): ${fmt(state.reportedByCurrency[cur]||0)}`, 10, y); y += 6; // UPDATED
     doc.text(`${cur} Difference: ${fmt(state.diffsByCurrency[cur])}`, 10, y); y += 8;
     if(y > 280){ doc.addPage(); y = 10; }
   });
 
-  // Overall
+  // Overall (kept in export)
   const denomAll = state.denomTotals.CAD + state.denomTotals.USD + state.denomTotals.EUR;
   const depositsAll = state.depositTotals.CAD + state.depositTotals.USD + state.depositTotals.EUR;
 
@@ -526,5 +530,4 @@ function exportPDF(){
 }
 
 window.addEventListener('DOMContentLoaded', init);
-
 el('resetBtn').addEventListener('click', resetAll);

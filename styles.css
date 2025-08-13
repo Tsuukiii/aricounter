@@ -98,38 +98,23 @@ body{
 .cell input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
 .cell .readonly{opacity:.8}
 
+/* Make readonly inputs visually locked and non-interactive */
+input[readonly]{
+  pointer-events:none;
+  user-select:text;
+  opacity:0.9;
+}
+
+/* Totals */
 .totals-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .tot{display:flex;flex-direction:column;gap:6px;background:#111;border:1px solid rgba(255,255,255,.1);padding:12px;border-radius:12px}
 .tot strong{font-size:20px}
 
 .footer{max-width:980px;margin:20px auto;padding:0 16px;color:var(--muted)}
 
-
-.logo-top {
-  display: flex;
-  justify-content: center;
-  padding: 12px 0;
-  background: transparent; /* or a color if you want */
-}
-
-.logo-image {
-  width: 70px; /* bigger circle */
-  height: 70px;
-  border-radius: 50%;
-  overflow: hidden; /* ensures the logo fills without white edges */
-  background: var(--accent); /* optional: orange background if logo is transparent */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* ensures it fills the circle */
-  display: block;
-}
-
+.logo-top { display: flex; justify-content: center; padding: 12px 0; background: transparent; }
+.logo-image { width: 70px; height: 70px; border-radius: 50%; overflow: hidden; background: var(--accent); display: flex; align-items: center; justify-content: center; }
+.logo-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 @media (max-width:640px){
   .denom-grid{grid-template-columns: 1fr 1fr}
