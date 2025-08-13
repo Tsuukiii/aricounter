@@ -4,8 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONTREAL DUTY FREE — Cash Counter</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- jsPDF for PDF export -->
+
+  <!-- Cache-busted assets so GitHub Pages shows the new code -->
+  <link rel="stylesheet" href="styles.css?v=20250813-2" />
+
+  <!-- jsPDF for PDF export (leave if you use Export PDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -17,7 +20,7 @@
         </div>
         <div>
           <h1>MONTREAL DUTY FREE</h1>
-          <p class="subtitle">AerRianta Intl NA </p>
+          <p class="subtitle">AerRianta Intl NA</p>
         </div>
       </div>
       <div class="header-actions">
@@ -60,7 +63,7 @@
       </div>
     </section>
 
-    <!-- Denominations -->
+    <!-- Denominations (Denomination + Value are locked by JS; Qty = numbers only) -->
     <section class="card">
       <div class="card-header">
         <h2>Denominations</h2>
@@ -73,12 +76,10 @@
       <div id="denomSections" class="denom-wrapper"></div>
     </section>
 
-    <!-- Totals -->
+    <!-- Totals (no Overall Counted section; keep per-currency + reconciled difference) -->
     <section class="card">
       <h2>Totals</h2>
       <div class="totals-grid">
-        <!-- Removed "Overall Counted (Denoms + Deposits)" on purpose -->
-
         <!-- CAD -->
         <div class="tot">
           <span>CAD Counted</span>
@@ -150,6 +151,7 @@
     <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype</small>
   </footer>
 
-  <script src="app.js"></script>
+  <!-- Cache-busted JS so changes load immediately -->
+  <script src="app.js?v=20250813-2"></script>
 </body>
 </html>
