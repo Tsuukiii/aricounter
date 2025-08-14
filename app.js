@@ -1,25 +1,50 @@
 // ===== Helpers =====
 function fmt(n){ return (Number(n||0)).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function el(id){ return document.getElementById(id); }
+function setText(id, text){ const x = el(id); if(x) x.textContent = text; }
+function setHTML(id, html){ const x = el(id); if(x) x.innerHTML = html; }
+function announce(msg){ const s = el('statusLive'); if(s){ s.textContent=''; setTimeout(()=>s.textContent=msg, 10); }}
 
-// i18n dictionary
+// Keyboard flow helpers
+function getFocusable(){
+  return Array.from(document.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+    .filter(el=>!el.hasAttribute('disabled') && el.offsetParent !== null);
+}
+function focusNext(prev=false){
+  const f = getFocusable(); const i = f.indexOf(document.activeElement);
+  const n = prev ? (i>0?i-1:i) : (i>=0 && i<f.length-1 ? i+1 : i);
+  if (f[n]) f[n].focus();
+}
+
+// ===== SharePoint per store =====
+const SP_SITE = "https://aerriantai43372.sharepoint.com/sites/CashCountingReports";
+const SP_LIBRARY = "Cash Counting Reports"; // exact library name
+const STORE_TO_FOLDER = {
+  International: "International",
+  Transborder:   "Transborder",
+  Jetty:         "Jetty",
+  Value:         "Value"
+};
+function openSPForStore(){
+  const store = el('store')?.value;
+  const folder = STORE_TO_FOLDER[store];
+  const url = folder
+    ? `${SP_SITE}/${encodeURIComponent(SP_LIBRARY)}/${encodeURIComponent(folder)}`
+    : `${SP_SITE}/${encodeURIComponent(SP_LIBRARY)}`;
+  window.open(url, '_blank', 'noopener');
+}
+
+// ===== i18n =====
 const I18N = {
   en: {
     sessionInfo: "Session Info",
-    headCashier: "Head Cashier Name",
+    headCashier: "Head Cashier/Manager Name",
     date: "Date",
     store: "Store",
     cashiers: "Cashiers (who used the cash)",
     cashNumber: "Cash Number",
     denominations: "Denominations",
     totals: "Totals",
-    overallCounted: "Overall Counted (Denoms + Deposits)",
-    reported: "Reported",
-    difference: "Difference",
-    counted: "Counted",
-    cad: "CAD",
-    usd: "USD",
-    eur: "EUR",
     cardDiff: "Card Difference (info only)",
     recDiff: "Reconciled Difference (CAD + USD + EUR)",
     btnPrint: "Print",
@@ -27,36 +52,47 @@ const I18N = {
     btnReset: "Reset",
     btnCSV: "Export CSV",
     btnPDF: "Export PDF",
-    depositPrompt: "Enter deposit amounts (leave blank if none):",
-    depositCAD: "CAD amount:",
-    depositUSD: "USD amount:",
-    depositEUR: "EUR amount:",
-    depositNote: "Optional note (e.g., Mid-day drop, bag #):",
-    depositAdded: "Deposit added.",
+    statusCSV: "CSV exported.",
+    statusPDF: "PDF exported.",
+    // Help modal
+    helpTitle: "How to use this app",
+    helpOk: "Got it",
+    helpListHtml: `
+      <li><strong>Session Info:</strong> Fill your name, date, store, cashiers, and cash number.</li>
+      <li><strong>Currencies:</strong> Toggle CAD / USD / EUR you will count.</li>
+      <li><strong>Count:</strong> Enter <em>quantities</em> for each denomination. Totals update automatically.</li>
+      <li><strong>Reported totals:</strong> Enter Z-report values per currency.</li>
+      <li><strong>Review variance:</strong> Check differences (reported − counted).</li>
+      <li><strong>Deposits:</strong> Use “+ Deposit” to record drops. You can edit/delete them later.</li>
+      <li><strong>Export:</strong> Use “Export CSV” or “Export PDF”.</li>
+      <li><strong>SharePoint:</strong> Click “Open SharePoint Folder” to upload the file.</li>
+      <li><strong>Tip:</strong> Use FR/EN toggle if needed. Print for paper records.</li>
+    `,
+    // Deposit modal
+    depTitle: "Add Deposit",
+    depCAD: "CAD amount",
+    depUSD: "USD amount",
+    depEUR: "EUR amount",
+    depNote: "Optional note (e.g., Mid-day drop, bag #)",
+    depSave: "Save",
     invalidAmount: "Invalid amount",
-    placeholders: {
-      cashierName: "Your full name",
-      cashiersList: "Comma-separated e.g., Samira, Alex",
-      reported: "0.00",
-      cashNumber: "e.g., Cash #1"
-    }
+    depositAdded: "Deposit added.",
+    depositUpdated: "Deposit updated.",
+    confirmDelete: "Delete this deposit?",
+    // Validation
+    errName: "Please enter your name.",
+    errDateFuture: "Date cannot be in the future.",
+    errQtyRange: "Quantity must be between 0 and 10,000."
   },
   fr: {
     sessionInfo: "Infos de session",
-    headCashier: "Nom du chef caissier",
+    headCashier: "Nom du chef caissier/gestionnaire",
     date: "Date",
     store: "Magasin",
     cashiers: "Caissiers (ayant utilisé la caisse)",
     cashNumber: "Numéro de caisse",
     denominations: "Dénominations",
     totals: "Totaux",
-    overallCounted: "Total compté (Billets + Dépôts)",
-    reported: "Déclaré",
-    difference: "Écart",
-    counted: "Compté",
-    cad: "CAD",
-    usd: "USD",
-    eur: "EUR",
     cardDiff: "Écart carte (info seulement)",
     recDiff: "Écart réconcilié (CAD + USD + EUR)",
     btnPrint: "Imprimer",
@@ -64,23 +100,45 @@ const I18N = {
     btnReset: "Réinitialiser",
     btnCSV: "Exporter CSV",
     btnPDF: "Exporter PDF",
-    depositPrompt: "Saisir les montants de dépôt (laisser vide si aucun) :",
-    depositCAD: "Montant CAD :",
-    depositUSD: "Montant USD :",
-    depositEUR: "Montant EUR :",
-    depositNote: "Note facultative (ex. dépôt midi, sac #) :",
-    depositAdded: "Dépôt ajouté.",
+    statusCSV: "CSV exporté.",
+    statusPDF: "PDF exporté.",
+    helpTitle: "Comment utiliser l’application",
+    helpOk: "Compris",
+    helpListHtml: `
+      <li><strong>Infos de session :</strong> Renseignez votre nom, date, magasin, caissiers et numéro de caisse.</li>
+      <li><strong>Devises :</strong> Activez CAD / USD / EUR à compter.</li>
+      <li><strong>Comptage :</strong> Entrez les <em>quantités</em> par dénomination. Totaux mis à jour automatiquement.</li>
+      <li><strong>Déclaré :</strong> Saisissez les montants du rapport Z par devise.</li>
+      <li><strong>Écarts :</strong> Vérifiez les différences (déclaré − compté).</li>
+      <li><strong>Dépôts :</strong> Utilisez « + Dépôt » pour enregistrer des dépôts. Vous pouvez les modifier/supprimer.</li>
+      <li><strong>Export :</strong> Utilisez « Exporter CSV » ou « Exporter PDF ».</li>
+      <li><strong>SharePoint :</strong> Cliquez « Ouvrir le dossier SharePoint » pour téléverser le fichier.</li>
+      <li><strong>Astuce :</strong> Utilisez le basculement FR/EN. Imprimez si nécessaire.</li>
+    `,
+    depTitle: "Ajouter un dépôt",
+    depCAD: "Montant CAD",
+    depUSD: "Montant USD",
+    depEUR: "Montant EUR",
+    depNote: "Note facultative (ex. dépôt midi, sac #)",
+    depSave: "Enregistrer",
     invalidAmount: "Montant invalide",
-    placeholders: {
-      cashierName: "Votre nom complet",
-      cashiersList: "Séparés par des virgules ex.: Samira, Alex",
-      reported: "0,00",
-      cashNumber: "ex.: Caisse #1"
-    }
+    depositAdded: "Dépôt ajouté.",
+    depositUpdated: "Dépôt mis à jour.",
+    confirmDelete: "Supprimer ce dépôt ?",
+    errName: "Veuillez entrer votre nom.",
+    errDateFuture: "La date ne peut pas être dans le futur.",
+    errQtyRange: "La quantité doit être entre 0 et 10 000."
   }
 };
-
 let currentLang = "en";
+
+// ===== Per-store variance thresholds =====
+const STORE_TOLERANCE = {
+  International: 2,
+  Transborder: 2,
+  Jetty: 1,
+  Value: 1
+};
 
 // ===== Data State =====
 const PRESETS = { CAD:[100,50,20,10,5], USD:[100,50,20,10,5,1], EUR:[500,200,100,50,20,10,5] };
@@ -92,20 +150,12 @@ const state = {
     USD: {enabled:false, rows: PRESETS.USD.map(v=>({label:`$${v}`, value:v, qty:0, total:0}))},
     EUR: {enabled:false, rows: PRESETS.EUR.map(v=>({label:`€${v}`, value:v, qty:0, total:0}))},
   },
-  // denomination totals by currency
   denomTotals: { CAD:0, USD:0, EUR:0 },
-  // deposit totals by currency
   depositTotals: { CAD:0, USD:0, EUR:0 },
-  deposits: [], // {currency:'CAD'|'USD'|'EUR', amount:number, note:string, time:string}
-
-  // per-currency reported and diff (reported - (denom+deposits))
+  deposits: [], // {currency, amount, note, time}
   reportedByCurrency: { CAD:0, USD:0, EUR:0 },
   diffsByCurrency:    { CAD:0, USD:0, EUR:0 },
-
-  // info-only
   cardDifference: 0,
-
-  // overall
   countedTotal: 0,
   reconciledDifference: 0
 };
@@ -114,44 +164,91 @@ const state = {
 function init(){
   // Year & date
   const d = new Date();
-  const yearEl = el('year'); if(yearEl) yearEl.textContent = String(d.getFullYear());
+  setText('year', String(d.getFullYear()));
   const dateEl = el('countDate'); if(dateEl) dateEl.valueAsDate = d;
 
-  // Currency toggles (null-safe)
-  const cadT = el('enableCAD'); if(cadT) cadT.addEventListener('change', e=>{ state.currencies.CAD.enabled = e.target.checked; renderDenoms(); calcTotals(); });
-  const usdT = el('enableUSD'); if(usdT) usdT.addEventListener('change', e=>{ state.currencies.USD.enabled = e.target.checked; renderDenoms(); calcTotals(); });
-  const eurT = el('enableEUR'); if(eurT) eurT.addEventListener('change', e=>{ state.currencies.EUR.enabled = e.target.checked; renderDenoms(); calcTotals(); });
+  // Respect prefers-reduced-motion
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.body.classList.add('reduce-motion');
+  }
+
+  // Contrast toggle (persist)
+  const savedHC = localStorage.getItem('hc') === '1';
+  if (savedHC) { document.body.classList.add('hc'); el('contrastToggle')?.setAttribute('aria-pressed','true'); }
+  el('contrastToggle')?.addEventListener('click', ()=>{
+    const on = !document.body.classList.toggle('hc');
+    // toggle returned false means class present; invert
+    const isOn = document.body.classList.contains('hc');
+    el('contrastToggle').setAttribute('aria-pressed', isOn ? 'true':'false');
+    localStorage.setItem('hc', isOn ? '1' : '0');
+  });
+
+  // Currency toggles
+  ['CAD','USD','EUR'].forEach(cur=>{
+    const toggle = el('enable'+cur);
+    if(toggle) toggle.addEventListener('change', e=>{
+      state.currencies[cur].enabled = e.target.checked;
+      renderDenoms(); calcTotals(); validateForm();
+    });
+  });
 
   // Per-currency reported
   ['CAD','USD','EUR'].forEach(cur=>{
     const r = el(`reported${cur}`);
-    if(r) r.addEventListener('input', (e)=>{ state.reportedByCurrency[cur] = Number(e.target.value||0); calcTotals(); });
+    if(r) r.addEventListener('input', (e)=>{ state.reportedByCurrency[cur] = Number(e.target.value||0); calcTotals(); colorizeDiffs(); validateForm(); });
   });
 
-  // Card difference
-  const cardEl = el('cardDifference');
-  if(cardEl) cardEl.addEventListener('input', e=>{ state.cardDifference = Number(e.target.value||0); });
+  // Card diff & cash number
+  el('cardDifference')?.addEventListener('input', e=>{ state.cardDifference = Number(e.target.value||0); });
+  el('cashNumber')?.addEventListener('input', e=>{ state.cashNumber = e.target.value; });
 
-  // Cash number
-  const cashNum = el('cashNumber');
-  if(cashNum) cashNum.addEventListener('input', e=>{ state.cashNumber = e.target.value; });
+  // Header & action buttons
+  el('langToggle')?.addEventListener('click', toggleLanguage);
+  el('printBtn')?.addEventListener('click', ()=>window.print());
+  el('exportCsvBtn')?.addEventListener('click', ()=>{ if(!validateForm()) return; exportCSV(); announce(I18N[currentLang].statusCSV); });
+  el('exportPdfBtn')?.addEventListener('click', async ()=>{ if(!validateForm()) return; await exportPDF(); announce(I18N[currentLang].statusPDF); });
+  el('resetBtn')?.addEventListener('click', ()=>{ if(confirm("Are you sure you want to reset?")) resetAll(); });
 
-  // Buttons (null-safe)
-  const langBtn = el('langToggle'); if(langBtn) langBtn.addEventListener('click', toggleLanguage);
-  const printBtn = el('printBtn'); if(printBtn) printBtn.addEventListener('click', ()=>window.print());
-  const depBtn = el('depositBtn'); if(depBtn) depBtn.addEventListener('click', addDepositByCurrency);
-  el('resetBtn').addEventListener('click', () => {
-  if (confirm("Are you sure you want to reset?")) {
-    resetAll();
-  }
-});
+  // SharePoint buttons
+  el('openSharePointBtn')?.addEventListener('click', openSPForStore);
+  el('openSharePointBtn2')?.addEventListener('click', openSPForStore);
 
-  const csvBtn = el('exportCsvBtn'); if(csvBtn) csvBtn.addEventListener('click', exportCSV);
-  const pdfBtn = el('exportPdfBtn'); if(pdfBtn) pdfBtn.addEventListener('click', exportPDF);
+  // Help modal
+  el('helpBtn')?.addEventListener('click', openHelp);
+  el('helpOk')?.addEventListener('click', closeHelp);
+  el('helpClose')?.addEventListener('click', closeHelp);
+
+  // Deposit modal
+  el('depositBtn')?.addEventListener('click', ()=>openDeposit());
+  el('depositSave')?.addEventListener('click', saveDeposit);
+  el('depositClose')?.addEventListener('click', closeDeposit);
+
+  // Close modals when clicking backdrop
+  document.addEventListener('click', (e)=>{
+    if (e.target && e.target.matches('.modal-backdrop,[data-close="true"]')) {
+      closeHelp(); closeDeposit();
+    }
+    // Close any open deposit menus if clicking outside
+    if (!e.target.closest?.('.deposit-actions')) {
+      document.querySelectorAll('.menu.open').forEach(m=>m.classList.remove('open'));
+    }
+  });
+
+  // Close modals on Esc & keyboard flow next/prev
+  document.addEventListener('keydown', (e)=>{
+    const helpOpen = el('helpModal')?.getAttribute('aria-hidden') === 'false';
+    const depOpen  = el('depositModal')?.getAttribute('aria-hidden') === 'false';
+    if (e.key === 'Escape' && (helpOpen || depOpen)) { closeHelp(); closeDeposit(); }
+    if (e.key === 'Enter' && !e.shiftKey) { focusNext(false); }
+    if (e.key === 'Enter' && e.shiftKey)  { focusNext(true); }
+  });
 
   applyLanguage(currentLang);
   renderDenoms();
   calcTotals();
+  colorizeDiffs();
+  renderDeposits();
+  validateForm();
 }
 
 // ===== Language =====
@@ -159,7 +256,6 @@ function applyLanguage(lang){
   currentLang = lang;
   const t = I18N[lang];
 
-  // Buttons
   setButtonText('printBtn', t.btnPrint);
   setButtonText('depositBtn', t.btnDeposit);
   setButtonText('resetBtn', t.btnReset);
@@ -168,11 +264,11 @@ function applyLanguage(lang){
   setButtonText('langToggle', lang === 'en' ? 'FR' : 'EN');
 
   // Placeholders
-  const p = t.placeholders;
-  const cn = el('cashierName'); if(cn) cn.placeholder = p.cashierName;
-  const cl = el('cashiersList'); if(cl) cl.placeholder = p.cashiersList;
-  ['reportedCAD','reportedUSD','reportedEUR'].forEach(id=>{ const x = el(id); if(x) x.placeholder = p.reported; });
-  const cnum = el('cashNumber'); if(cnum) cnum.placeholder = p.cashNumber;
+  const p = t.placeholders || { cashierName:"", cashiersList:"", reported:"", cashNumber:"" };
+  const cn = el('cashierName'); if(cn && p.cashierName) cn.placeholder = p.cashierName;
+  const cl = el('cashiersList'); if(cl && p.cashiersList) cl.placeholder = p.cashiersList;
+  ['reportedCAD','reportedUSD','reportedEUR'].forEach(id=>{ const x = el(id); if(x && p.reported) x.placeholder = p.reported; });
+  const cnum = el('cashNumber'); if(cnum && p.cashNumber) cnum.placeholder = p.cashNumber;
 
   // Labels
   setLabelForInput('cashierName', t.headCashier);
@@ -181,19 +277,31 @@ function applyLanguage(lang){
   setLabelForInput('cashiersList', t.cashiers);
   setLabelForInput('cashNumber', t.cashNumber);
 
-  // Section titles (best-effort)
+  // Section titles
   document.querySelectorAll('main .card h2').forEach(h=>{
     const text = h.textContent.trim().toLowerCase();
     if(text.includes('session info') || text.includes('infos de session')) h.textContent = t.sessionInfo;
     else if(text.includes('denominations') || text.includes('dénominations')) h.textContent = t.denominations;
     else if(text.includes('totals') || text.includes('totaux')) h.textContent = t.totals;
+    else if(text.includes('deposits') || text.includes('dépôts')) h.textContent = lang==='en' ? 'Deposits' : 'Dépôts';
   });
-}
 
-function toggleLanguage(){
-  applyLanguage(currentLang === 'en' ? 'fr' : 'en');
-}
+  // Help modal text
+  setText('helpTitle', t.helpTitle);
+  setHTML('helpList', t.helpListHtml);
+  setButtonText('helpOk', t.helpOk);
 
+  // Deposit modal text
+  setText('depositTitle', t.depTitle);
+  setText('lblDepCAD', t.depCAD);
+  setText('lblDepUSD', t.depUSD);
+  setText('lblDepEUR', t.depEUR);
+  setText('lblDepNote', t.depNote);
+  setButtonText('depositSave', t.depSave);
+
+  // Re-run validation texts if showing errors
+  validateForm();
+}
 function setLabelForInput(inputId, text){
   const input = el(inputId);
   if(!input) return;
@@ -202,10 +310,10 @@ function setLabelForInput(inputId, text){
   const span = label.querySelector("span");
   if(span) span.textContent = text;
 }
-
 function setButtonText(id, text){ const b = el(id); if(b) b.textContent = text; }
+function toggleLanguage(){ applyLanguage(currentLang === 'en' ? 'fr' : 'en'); }
 
-// ===== UI: Denomination Sections =====
+// ===== UI: Denomination Sections (better tab order) =====
 function denomSection(currency){
   const section = document.createElement('div');
   section.className = 'denom-section';
@@ -224,37 +332,48 @@ function denomSection(currency){
   });
 
   state.currencies[currency].rows.forEach(row=>{
+    // Denomination (READ-ONLY)
     const labelCell = document.createElement('div');
     labelCell.className = 'cell';
     const labelInput = document.createElement('input');
     labelInput.value = row.label;
-    labelInput.addEventListener('input', e=>{ row.label = e.target.value; });
+    labelInput.readOnly = true;
+    labelInput.tabIndex = -1;
     labelCell.appendChild(labelInput);
 
+    // Qty
     const qtyCell = document.createElement('div');
     qtyCell.className = 'cell';
     const qtyInput = document.createElement('input');
-    qtyInput.type = 'number'; qtyInput.min='0'; qtyInput.step='1';
+    qtyInput.type = 'number'; qtyInput.min='0'; qtyInput.step='1'; qtyInput.inputMode='numeric';
     qtyInput.value = row.qty;
+    qtyInput.addEventListener('keydown', e=>{
+      if (['e','E','+','-','.'].includes(e.key)) e.preventDefault();
+    });
+    qtyInput.addEventListener('wheel', e=>{ e.preventDefault(); e.target.blur(); }, {passive:false});
     qtyInput.addEventListener('input', e=>{
-      row.qty = Number(e.target.value||0);
+      e.target.value = e.target.value.replace(/[^\d]/g,'');
+      let v = Number(e.target.value||0);
+      if (v < 0) v = 0;
+      if (v > 10000) v = 10000;
+      e.target.value = String(v);
+      row.qty = v;
       row.total = row.qty * Number(row.value||0);
-      calcTotals(); lineTotal.textContent = fmt(row.total);
+      calcTotals(); colorizeDiffs(); validateForm(); lineTotal.textContent = fmt(row.total);
     });
     qtyCell.appendChild(qtyInput);
 
+    // Value (READ-ONLY)
     const valueCell = document.createElement('div');
     valueCell.className = 'cell';
     const valueInput = document.createElement('input');
-    valueInput.type = 'number'; valueInput.step='0.01';
+    valueInput.type = 'number';
     valueInput.value = row.value;
-    valueInput.addEventListener('input', e=>{
-      row.value = Number(e.target.value||0);
-      row.total = row.qty * Number(row.value||0);
-      calcTotals(); lineTotal.textContent = fmt(row.total);
-    });
+    valueInput.readOnly = true;
+    valueInput.tabIndex = -1;
     valueCell.appendChild(valueInput);
 
+    // Line total (read-only display)
     const totalCell = document.createElement('div');
     totalCell.className = 'cell';
     const lineTotal = document.createElement('div');
@@ -281,17 +400,24 @@ function renderDenoms(){
       wrap.appendChild(denomSection(cur));
     }
   });
+
+  // Assign sequential tabindex to Qty fields (row-by-row across enabled currencies)
+  let idx = 100;
+  wrap.querySelectorAll('.denom-section').forEach(section=>{
+    section.querySelectorAll('.cell input[type="number"]:not([readonly])').forEach(inp=>{
+      inp.tabIndex = idx++;
+    });
+  });
 }
 
-// ===== Calculations =====
+// ===== Calculations & variance coloring =====
 function calcTotals(){
-  // Denomination totals
   const sumDenoms = curObj => curObj.rows.reduce((s,r)=> s + (Number(r.qty||0) * Number(r.value||0)), 0);
   state.denomTotals.CAD = state.currencies.CAD.enabled ? sumDenoms(state.currencies.CAD) : 0;
   state.denomTotals.USD = state.currencies.USD.enabled ? sumDenoms(state.currencies.USD) : 0;
   state.denomTotals.EUR = state.currencies.EUR.enabled ? sumDenoms(state.currencies.EUR) : 0;
 
-  // Deposit totals (recalculate)
+  // Deposit totals
   state.depositTotals = { CAD:0, USD:0, EUR:0 };
   state.deposits.forEach(d=>{
     if(d.currency && state.depositTotals[d.currency] != null){
@@ -311,76 +437,275 @@ function calcTotals(){
     state.diffsByCurrency[cur] = Number(state.reportedByCurrency[cur]||0) - countedByCur[cur];
   });
 
-  // Overall counted total
   state.countedTotal = countedByCur.CAD + countedByCur.USD + countedByCur.EUR;
-
-  // Reconciled difference
   state.reconciledDifference = state.diffsByCurrency.CAD + state.diffsByCurrency.USD + state.diffsByCurrency.EUR;
 
   // Update UI
-  const countedTotalEl = el('countedTotal'); if(countedTotalEl) countedTotalEl.textContent = fmt(state.countedTotal);
-  const cadTotalEl = el('cadTotal'); if(cadTotalEl) cadTotalEl.textContent = fmt(countedByCur.CAD);
-  const usdTotalEl = el('usdTotal'); if(usdTotalEl) usdTotalEl.textContent = fmt(countedByCur.USD);
-  const eurTotalEl = el('eurTotal'); if(eurTotalEl) eurTotalEl.textContent = fmt(countedByCur.EUR);
-  const cadDiffEl = el('cadDiff'); if(cadDiffEl) cadDiffEl.textContent = fmt(state.diffsByCurrency.CAD);
-  const usdDiffEl = el('usdDiff'); if(usdDiffEl) usdDiffEl.textContent = fmt(state.diffsByCurrency.USD);
-  const eurDiffEl = el('eurDiff'); if(eurDiffEl) eurDiffEl.textContent = fmt(state.diffsByCurrency.EUR);
-  const recEl = el('recDiff'); if(recEl) recEl.textContent = fmt(state.reconciledDifference);
+  setText('cadTotal', fmt(countedByCur.CAD));
+  setText('usdTotal', fmt(countedByCur.USD));
+  setText('eurTotal', fmt(countedByCur.EUR));
+  setText('cadDiff', fmt(state.diffsByCurrency.CAD));
+  setText('usdDiff', fmt(state.diffsByCurrency.USD));
+  setText('eurDiff', fmt(state.diffsByCurrency.EUR));
+  setText('recDiff', fmt(state.reconciledDifference));
+
+  // Sticky summary
+  setText('summaryCounted', fmt(state.countedTotal));
+  setText('summaryRecDiff', fmt(state.reconciledDifference));
 }
 
-// ===== Deposits (per currency) =====
-function addDepositByCurrency(){
+function colorize(el, val, tol){
+  el.classList.remove('ok','warn','err');
+  if (Number(val) === 0) el.classList.add('ok');
+  else if (Math.abs(Number(val)) <= tol) el.classList.add('warn');
+  else el.classList.add('err');
+}
+function colorizeDiffs(){
+  const store = el('store')?.value || 'International';
+  const tol = STORE_TOLERANCE[store] ?? 2;
+  colorize(el('cadDiff'), state.diffsByCurrency.CAD, tol);
+  colorize(el('usdDiff'), state.diffsByCurrency.USD, tol);
+  colorize(el('eurDiff'), state.diffsByCurrency.EUR, tol);
+  colorize(el('recDiff'), state.reconciledDifference, tol);
+}
+
+// ===== Deposits (list + edit/delete) =====
+let lastFocusHelp = null, lastFocusDeposit = null;
+let editingIndex = null; // null = creating new
+
+function openDeposit(editIdx=null){
+  const m = el('depositModal');
+  if(!m) return;
+
+  editingIndex = editIdx;
+
+  // Reset fields
+  ['depCAD','depUSD','depEUR','depNote'].forEach(id=>{ const x = el(id); if(x) x.value=''; });
+
+  // Editing an existing deposit: preload its values
+  if (editIdx !== null && state.deposits[editIdx]){
+    const d = state.deposits[editIdx];
+    el('depNote').value = d.note || '';
+    if (d.currency === 'CAD') el('depCAD').value = d.amount;
+    if (d.currency === 'USD') el('depUSD').value = d.amount;
+    if (d.currency === 'EUR') el('depEUR').value = d.amount;
+    setText('depositTitle', I18N[currentLang].depTitle.replace(/Add/i,'Edit').replace(/Ajouter/i,'Modifier'));
+  } else {
+    setText('depositTitle', I18N[currentLang].depTitle);
+  }
+
+  lastFocusDeposit = document.activeElement;
+  m.setAttribute('aria-hidden','false');
+  m.querySelector('.modal-panel')?.focus();
+  document.body.style.overflow = 'hidden';
+}
+function closeDeposit(){
+  const m = el('depositModal');
+  if(!m) return;
+  m.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+  if (lastFocusDeposit) lastFocusDeposit.focus();
+  editingIndex = null;
+}
+function saveDeposit(){
   const t = I18N[currentLang];
-  alert(t.depositPrompt);
-
-  const cadStr = prompt(t.depositCAD, "");
-  const usdStr = prompt(t.depositUSD, "");
-  const eurStr = prompt(t.depositEUR, "");
-  const note = prompt(t.depositNote, "") || "";
-
   const entries = [
-    {currency:'CAD', str:cadStr},
-    {currency:'USD', str:usdStr},
-    {currency:'EUR', str:eurStr}
+    {currency:'CAD', val: Number(el('depCAD').value || 0)},
+    {currency:'USD', val: Number(el('depUSD').value || 0)},
+    {currency:'EUR', val: Number(el('depEUR').value || 0)}
   ];
+  const note = el('depNote').value || '';
+  // validation
+  for(const e of entries){
+    if (isNaN(e.val)) { alert(t.invalidAmount); return; }
+    if (e.val < 0) { alert(t.invalidAmount); return; }
+  }
 
-  let added = false;
-  entries.forEach(ent=>{
-    if(ent.str === null || ent.str.trim()==="") return;
-    const val = Number(ent.str);
-    if(!isFinite(val) || isNaN(val)) return alert(I18N[currentLang].invalidAmount);
-    if(val !== 0){
-      state.deposits.push({ currency: ent.currency, amount: val, note, time: new Date().toISOString() });
-      added = true;
+  let any = false;
+  if (editingIndex !== null){
+    // Update one deposit (choose the filled currency; if none, delete)
+    const filled = entries.find(e=> e.val !== 0);
+    if (!filled){ // user cleared it → delete
+      state.deposits.splice(editingIndex, 1);
+    } else {
+      const d = state.deposits[editingIndex];
+      d.currency = filled.currency;
+      d.amount = filled.val;
+      d.note = note;
+      d.time = new Date().toISOString();
     }
-  });
+    announce(t.depositUpdated);
+    any = true;
+  } else {
+    // Add up to three deposits (one per non-zero currency)
+    entries.forEach(e=>{
+      if (e.val !== 0){
+        state.deposits.push({ currency:e.currency, amount:e.val, note, time:new Date().toISOString() });
+        any = true;
+      }
+    });
+    if (any) announce(t.depositAdded);
+  }
 
-  if(added){ calcTotals(); alert(t.depositAdded); }
+  calcTotals();
+  colorizeDiffs();
+  renderDeposits();
+  closeDeposit();
+}
+
+function renderDeposits(){
+  const wrap = el('depositsList'); if(!wrap) return;
+  wrap.innerHTML = '';
+  if (state.deposits.length === 0){
+    wrap.classList.add('empty');
+    return;
+  }
+  wrap.classList.remove('empty');
+
+  state.deposits.forEach((d, idx)=>{
+    const item = document.createElement('div');
+    item.className = 'deposit-item';
+
+    const meta = document.createElement('div');
+    meta.className = 'deposit-meta';
+    meta.innerHTML = `<strong>${d.currency}</strong> ${fmt(d.amount)} — ${d.note ? d.note+' — ' : ''}<span class="muted">${new Date(d.time).toLocaleString()}</span>`;
+
+    const actions = document.createElement('div');
+    actions.className = 'deposit-actions';
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'menu-btn';
+    menuBtn.setAttribute('aria-haspopup','true');
+    menuBtn.setAttribute('aria-expanded','false');
+    menuBtn.textContent = '⋯';
+    const menu = document.createElement('div');
+    menu.className = 'menu';
+    const bEdit = document.createElement('button');
+    bEdit.textContent = currentLang==='en' ? 'Edit' : 'Modifier';
+    bEdit.addEventListener('click', ()=>{ menu.classList.remove('open'); openDeposit(idx); });
+    const bDel = document.createElement('button');
+    bDel.textContent = currentLang==='en' ? 'Delete' : 'Supprimer';
+    bDel.addEventListener('click', ()=>{
+      menu.classList.remove('open');
+      if (confirm(I18N[currentLang].confirmDelete)){
+        state.deposits.splice(idx,1);
+        calcTotals(); colorizeDiffs(); renderDeposits();
+      }
+    });
+    menu.appendChild(bEdit); menu.appendChild(bDel);
+
+    menuBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const open = menu.classList.toggle('open');
+      menuBtn.setAttribute('aria-expanded', open ? 'true':'false');
+    });
+
+    actions.appendChild(menuBtn);
+    actions.appendChild(menu);
+
+    item.appendChild(meta);
+    item.appendChild(actions);
+    wrap.appendChild(item);
+  });
+}
+
+// ===== Help Modal =====
+function openHelp(){
+  const m = el('helpModal');
+  if(!m) return;
+  lastFocusHelp = document.activeElement;
+  m.setAttribute('aria-hidden','false');
+  m.querySelector('.modal-panel')?.focus();
+  document.body.style.overflow = 'hidden';
+}
+function closeHelp(){
+  const m = el('helpModal');
+  if(!m) return;
+  m.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+  if (lastFocusHelp) lastFocusHelp.focus();
+}
+
+// ===== Validation (inline + ARIA) =====
+function setError(id, msg){
+  const err = el('err-'+id);
+  const fld = el(id);
+  if (!err || !fld) return;
+  if (msg){
+    err.textContent = msg; err.removeAttribute('aria-hidden');
+    fld.setAttribute('aria-invalid','true');
+  } else {
+    err.textContent = ''; err.setAttribute('aria-hidden','true');
+    fld.removeAttribute('aria-invalid');
+  }
+}
+function validateForm(){
+  const t = I18N[currentLang];
+  let ok = true;
+
+  // Name required
+  const name = el('cashierName')?.value.trim();
+  if (!name){ setError('cashierName', t.errName); ok = false; }
+  else setError('cashierName', '');
+
+  // Date not in future
+  const dateVal = el('countDate')?.value;
+  if (dateVal){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(dateVal + 'T00:00:00');
+    if (d > today){ setError('countDate', t.errDateFuture); ok = false; }
+    else setError('countDate', '');
+  } else {
+    setError('countDate', t.errDateFuture); ok = false;
+  }
+
+  // Quantities range (any out-of-range?)
+  let qtyBad = false;
+  document.querySelectorAll('.denom-section .cell input[type="number"]:not([readonly])').forEach(inp=>{
+    const v = Number(inp.value||0);
+    if (v < 0 || v > 10000) qtyBad = true;
+  });
+  if (qtyBad){ announce(t.errQtyRange); }
+
+  // Enable/disable export buttons
+  el('exportCsvBtn')?.toggleAttribute('disabled', !ok);
+  el('exportPdfBtn')?.toggleAttribute('disabled', !ok);
+
+  return ok;
 }
 
 // ===== Reset =====
 function resetAll(){
+  // Clear text fields
   ['cashierName','cashiersList','cashNumber'].forEach(id=>{ const x = el(id); if(x) x.value=''; });
+  // Reset date to today
   const d = new Date(); const dateEl = el('countDate'); if(dateEl) dateEl.valueAsDate = d;
+  // Reset store dropdown to first option
   const st = el('store'); if(st) st.selectedIndex = 0;
 
+  // Reset currencies & rows
   Object.keys(state.currencies).forEach(c=>{
     state.currencies[c].rows.forEach(r=>{ r.qty=0; r.total=0; });
+    // keep enabled state as toggled by user
   });
 
+  // Clear deposits
   state.deposits = [];
   state.depositTotals = { CAD:0, USD:0, EUR:0 };
 
+  // Clear reported inputs & diffs
   ['CAD','USD','EUR'].forEach(cur=>{
     state.reportedByCurrency[cur]=0;
     const input = el(`reported${cur}`); if(input) input.value='';
   });
-  state.cardDifference = 0; const cardEl = el('cardDifference'); if(cardEl) cardEl.value='';
 
+  state.cardDifference = 0; const cardEl = el('cardDifference'); if(cardEl) cardEl.value='';
   state.cashNumber = "";
 
   renderDenoms();
+  renderDeposits();
   calcTotals();
+  colorizeDiffs();
+  validateForm();
 }
 
 // ===== Filename & Exports =====
@@ -398,7 +723,7 @@ function exportCSV(){
   rows.push(['Company','MONTREAL DUTY FREE']);
   rows.push(['Sous-name','AER RIANTA ITL']);
   rows.push(['Store', el('store').value]);
-  rows.push(['Head Cashier', el('cashierName').value]);
+  rows.push(['Head Cashier/Manager Name', el('cashierName').value]);
   rows.push(['Date', el('countDate').value]);
   rows.push(['Cashiers', el('cashiersList').value]);
   rows.push(['Cash Number', state.cashNumber]);
@@ -434,7 +759,7 @@ function exportCSV(){
   ['CAD','USD','EUR'].forEach(cur=>{
     const counted = (state.denomTotals[cur] + state.depositTotals[cur]).toFixed(2);
     rows.push([`${cur} Counted`, counted]);
-    rows.push([`${cur} Reported`, Number(state.reportedByCurrency[cur]||0).toFixed(2)]);
+    rows.push([`${cur} Reported (Z report)`, Number(state.reportedByCurrency[cur]||0).toFixed(2)]);
     rows.push([`${cur} Difference (Reported - Counted)`, state.diffsByCurrency[cur].toFixed(2)]);
     rows.push([]);
   });
@@ -458,7 +783,11 @@ function exportCSV(){
   link.click();
 }
 
-function exportPDF(){
+// Lazy-load jsPDF for performance
+async function exportPDF(){
+  if(!window.jspdf){
+    await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   let y = 10;
@@ -469,7 +798,7 @@ function exportPDF(){
   doc.setFontSize(12);
   doc.text(`Sous-name: AER RIANTA ITL`, 10, y); y += 6;
   doc.text(`Store: ${el('store').value}`, 10, y); y += 6;
-  doc.text(`Head Cashier: ${el('cashierName').value}`, 10, y); y += 6;
+  doc.text(`Head Cashier/Manager Name: ${el('cashierName').value}`, 10, y); y += 6;
   doc.text(`Date: ${el('countDate').value}`, 10, y); y += 6;
   doc.text(`Cashiers: ${el('cashiersList').value}`, 10, y); y += 6;
   doc.text(`Cash Number: ${state.cashNumber}`, 10, y); y += 10;
@@ -507,7 +836,7 @@ function exportPDF(){
   ['CAD','USD','EUR'].forEach(cur=>{
     const counted = state.denomTotals[cur] + state.depositTotals[cur];
     doc.text(`${cur} Counted: ${fmt(counted)}`, 10, y); y += 6;
-    doc.text(`${cur} Reported: ${fmt(state.reportedByCurrency[cur]||0)}`, 10, y); y += 6;
+    doc.text(`${cur} Reported (Z report): ${fmt(state.reportedByCurrency[cur]||0)}`, 10, y); y += 6;
     doc.text(`${cur} Difference: ${fmt(state.diffsByCurrency[cur])}`, 10, y); y += 8;
     if(y > 280){ doc.addPage(); y = 10; }
   });
@@ -526,5 +855,3 @@ function exportPDF(){
 }
 
 window.addEventListener('DOMContentLoaded', init);
-
-el('resetBtn').addEventListener('click', resetAll);
