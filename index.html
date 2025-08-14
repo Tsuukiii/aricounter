@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONTREAL DUTY FREE — Cash Counter</title>
 
-  <!-- Cache-busted assets so GitHub Pages shows the new code -->
-  <link rel="stylesheet" href="styles.css?v=20250813-2" />
-
-  <!-- jsPDF for PDF export (leave if you use Export PDF) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Cache-busted assets -->
+  <link rel="stylesheet" href="styles.css?v=20250813-6" />
 </head>
 <body>
   <header class="app-header">
     <div class="branding-left">
+      <!-- Help (far left) -->
+      <button id="helpBtn" class="btn ghost">Help</button>
+
       <div class="branding">
         <div class="logo-image">
           <img src="montreallogo.png" alt="Montreal Duty Free Logo">
@@ -23,25 +23,33 @@
           <p class="subtitle">AerRianta Intl NA</p>
         </div>
       </div>
+
       <div class="header-actions">
+        <button id="contrastToggle" class="btn ghost" aria-pressed="false">High Contrast</button>
         <button id="langToggle" class="btn ghost">FR</button>
         <button id="printBtn" class="btn secondary">Print</button>
+        <button id="openSharePointBtn" class="btn sharepoint">Open SharePoint Folder</button>
       </div>
     </div>
   </header>
 
+  <!-- Live region for small status/validation updates -->
+  <div id="statusLive" class="sr-only" aria-live="polite"></div>
+
   <main class="container">
     <!-- Session Info -->
-    <section class="card">
-      <h2>Session Info</h2>
+    <section class="card" aria-labelledby="sessionTitle">
+      <h2 id="sessionTitle">Session Info</h2>
       <div class="grid">
-        <label class="field">
+        <label class="field" id="f-cashierName">
           <span>Head Cashier/Manager Name</span>
-          <input id="cashierName" type="text" placeholder="Your full name" />
+          <input id="cashierName" type="text" placeholder="Your full name" aria-describedby="err-cashierName" />
+          <small id="err-cashierName" class="error" aria-hidden="true"></small>
         </label>
-        <label class="field">
+        <label class="field" id="f-countDate">
           <span>Date</span>
-          <input id="countDate" type="date" />
+          <input id="countDate" type="date" aria-describedby="err-countDate" />
+          <small id="err-countDate" class="error" aria-hidden="true"></small>
         </label>
         <label class="field">
           <span>Store</span>
@@ -49,7 +57,7 @@
             <option>International</option>
             <option>Transborder</option>
             <option>Jetty</option>
-            <option>Value Store</option>
+            <option>Value</option> <!-- matches SharePoint folder -->
           </select>
         </label>
         <label class="field">
@@ -63,10 +71,10 @@
       </div>
     </section>
 
-    <!-- Denominations (Denomination + Value are locked by JS; Qty = numbers only) -->
-    <section class="card">
+    <!-- Denominations -->
+    <section class="card" aria-labelledby="denomsTitle">
       <div class="card-header">
-        <h2>Denominations</h2>
+        <h2 id="denomsTitle">Denominations</h2>
         <div class="row gap">
           <label class="toggle"><input type="checkbox" id="enableCAD" checked> <span>CAD</span></label>
           <label class="toggle"><input type="checkbox" id="enableUSD"> <span>USD</span></label>
@@ -74,11 +82,12 @@
         </div>
       </div>
       <div id="denomSections" class="denom-wrapper"></div>
+      <small class="hint">Quantities must be between 0 and 10,000.</small>
     </section>
 
-    <!-- Totals (no Overall Counted section; keep per-currency + reconciled difference) -->
-    <section class="card">
-      <h2>Totals</h2>
+    <!-- Totals -->
+    <section class="card" aria-labelledby="totalsTitle">
+      <h2 id="totalsTitle">Totals</h2>
       <div class="totals-grid">
         <!-- CAD -->
         <div class="tot">
@@ -90,7 +99,7 @@
           </label>
           <div class="field compact">
             <span>CAD Difference</span>
-            <strong id="cadDiff">0.00</strong>
+            <strong id="cadDiff" class="diff">0.00</strong>
           </div>
         </div>
 
@@ -104,7 +113,7 @@
           </label>
           <div class="field compact">
             <span>USD Difference</span>
-            <strong id="usdDiff">0.00</strong>
+            <strong id="usdDiff" class="diff">0.00</strong>
           </div>
         </div>
 
@@ -118,7 +127,7 @@
           </label>
           <div class="field compact">
             <span>EUR Difference</span>
-            <strong id="eurDiff">0.00</strong>
+            <strong id="eurDiff" class="diff">0.00</strong>
           </div>
         </div>
 
@@ -133,25 +142,93 @@
         <!-- Reconciled Difference -->
         <div class="tot">
           <span>Reconciled Difference (CAD + USD + EUR)</span>
-          <strong id="recDiff">0.00</strong>
+          <strong id="recDiff" class="diff">0.00</strong>
         </div>
       </div>
     </section>
 
+    <!-- Deposits (list with edit/delete) -->
+    <section class="card" aria-labelledby="depositsTitle">
+      <div class="card-header">
+        <h2 id="depositsTitle">Deposits</h2>
+        <div class="row right">
+          <button id="depositBtn" class="btn">+ Deposit</button>
+        </div>
+      </div>
+      <div id="depositsList" class="deposits-list empty" aria-live="polite"></div>
+    </section>
+
     <!-- Actions -->
     <section class="card actions">
-      <button id="depositBtn" class="btn">+ Deposit</button>
       <button id="resetBtn" class="btn danger">Reset</button>
-      <button id="exportCsvBtn" class="btn">Export CSV</button>
-      <button id="exportPdfBtn" class="btn primary">Export PDF</button>
+      <button id="exportCsvBtn" class="btn" disabled>Export CSV</button>
+      <button id="exportPdfBtn" class="btn primary" disabled>Export PDF</button>
+      <button id="openSharePointBtn2" class="btn sharepoint">Open SharePoint Folder</button>
     </section>
+
+    <!-- Sticky summary -->
+    <div class="sticky-summary" aria-live="polite">
+      <div><strong>Total Counted:</strong> <span id="summaryCounted">0.00</span></div>
+      <div><strong>Reconciled Difference:</strong> <span id="summaryRecDiff">0.00</span></div>
+    </div>
   </main>
 
   <footer class="footer">
-    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype</small>
+    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype · v2025.08.13-6</small>
   </footer>
 
-  <!-- Cache-busted JS so changes load immediately -->
-  <script src="app.js?v=20250813-2"></script>
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="helpTitle" aria-modal="true">
+    <div class="modal-backdrop" data-close="true"></div>
+    <div class="modal-panel" role="document" tabindex="-1">
+      <header class="modal-header">
+        <h3 id="helpTitle">How to use this app</h3>
+        <button id="helpClose" class="btn ghost small" aria-label="Close help">✕</button>
+      </header>
+      <div class="modal-body">
+        <ol id="helpList" class="help-steps"></ol>
+      </div>
+      <footer class="modal-footer">
+        <button id="helpOk" class="btn primary">Got it</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Deposit Modal (create/edit) -->
+  <div id="depositModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="depositTitle" aria-modal="true">
+    <div class="modal-backdrop" data-close="true"></div>
+    <div class="modal-panel" role="document" tabindex="-1">
+      <header class="modal-header">
+        <h3 id="depositTitle">Add Deposit</h3>
+        <button id="depositClose" class="btn ghost small" aria-label="Close deposit">✕</button>
+      </header>
+      <div class="modal-body">
+        <div class="grid">
+          <label class="field">
+            <span id="lblDepCAD">CAD amount</span>
+            <input id="depCAD" type="number" step="0.01" placeholder="0.00" />
+          </label>
+          <label class="field">
+            <span id="lblDepUSD">USD amount</span>
+            <input id="depUSD" type="number" step="0.01" placeholder="0.00" />
+          </label>
+          <label class="field">
+            <span id="lblDepEUR">EUR amount</span>
+            <input id="depEUR" type="number" step="0.01" placeholder="0.00" />
+          </label>
+          <label class="field" style="grid-column:1/-1">
+            <span id="lblDepNote">Optional note (e.g., Mid-day drop, bag #)</span>
+            <input id="depNote" type="text" placeholder="Note" />
+          </label>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button id="depositSave" class="btn primary">Save</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Cache-busted JS -->
+  <script src="app.js?v=20250813-6"></script>
 </body>
 </html>
