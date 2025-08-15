@@ -6,7 +6,7 @@
   <title>MONTREAL DUTY FREE — Cash Counter</title>
 
   <!-- Cache-busted assets -->
-  <link rel="stylesheet" href="styles.css?v=20250813-6" />
+  <link rel="stylesheet" href="styles.css?v=20250814-4" />
 </head>
 <body>
   <header class="app-header">
@@ -97,6 +97,13 @@
             <span>CAD Reported (Z report)</span>
             <input id="reportedCAD" type="number" step="0.01" placeholder="0.00" />
           </label>
+
+          <!-- NEW: Lost Change CAD -->
+          <label class="field compact">
+            <span>CAD Lost Change (&lt; $5)</span>
+            <input id="lostChangeCAD" type="number" step="0.01" placeholder="0.00" />
+          </label>
+
           <div class="field compact">
             <span>CAD Difference</span>
             <strong id="cadDiff" class="diff">0.00</strong>
@@ -174,7 +181,7 @@
   </main>
 
   <footer class="footer">
-    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype · v2025.08.13-6</small>
+    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype · v2025.08.14-1</small>
   </footer>
 
   <!-- Help Modal -->
@@ -229,6 +236,6 @@
   </div>
 
   <!-- Cache-busted JS -->
-  <script src="app.js?v=20250813-6"></script>
+  <script src="app.js?v=20250814-1"></script>
 </body>
 </html>

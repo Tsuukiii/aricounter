@@ -152,6 +152,8 @@ const state = {
   },
   denomTotals: { CAD:0, USD:0, EUR:0 },
   depositTotals: { CAD:0, USD:0, EUR:0 },
+  // NEW: manual lost change under $5 for CAD only
+  lostChange: { CAD: 0 },
   deposits: [], // {currency, amount, note, time}
   reportedByCurrency: { CAD:0, USD:0, EUR:0 },
   diffsByCurrency:    { CAD:0, USD:0, EUR:0 },
@@ -177,7 +179,6 @@ function init(){
   if (savedHC) { document.body.classList.add('hc'); el('contrastToggle')?.setAttribute('aria-pressed','true'); }
   el('contrastToggle')?.addEventListener('click', ()=>{
     const on = !document.body.classList.toggle('hc');
-    // toggle returned false means class present; invert
     const isOn = document.body.classList.contains('hc');
     el('contrastToggle').setAttribute('aria-pressed', isOn ? 'true':'false');
     localStorage.setItem('hc', isOn ? '1' : '0');
@@ -196,6 +197,14 @@ function init(){
   ['CAD','USD','EUR'].forEach(cur=>{
     const r = el(`reported${cur}`);
     if(r) r.addEventListener('input', (e)=>{ state.reportedByCurrency[cur] = Number(e.target.value||0); calcTotals(); colorizeDiffs(); validateForm(); });
+  });
+
+  // NEW: Lost Change CAD listener
+  const lcCAD = el('lostChangeCAD');
+  if (lcCAD) lcCAD.addEventListener('input', e => {
+    state.lostChange.CAD = Number(e.target.value || 0);
+    calcTotals();
+    colorizeDiffs();
   });
 
   // Card diff & cash number
@@ -425,9 +434,9 @@ function calcTotals(){
     }
   });
 
-  // Counted per currency = denom + deposits
+  // Counted per currency = denom + deposits (+ lost change for CAD)
   const countedByCur = {
-    CAD: state.denomTotals.CAD + state.depositTotals.CAD,
+    CAD: state.denomTotals.CAD + state.depositTotals.CAD + (state.lostChange.CAD || 0),
     USD: state.denomTotals.USD + state.depositTotals.USD,
     EUR: state.denomTotals.EUR + state.depositTotals.EUR
   };
@@ -454,11 +463,11 @@ function calcTotals(){
   setText('summaryRecDiff', fmt(state.reconciledDifference));
 }
 
-function colorize(el, val, tol){
-  el.classList.remove('ok','warn','err');
-  if (Number(val) === 0) el.classList.add('ok');
-  else if (Math.abs(Number(val)) <= tol) el.classList.add('warn');
-  else el.classList.add('err');
+function colorize(elm, val, tol){
+  elm.classList.remove('ok','warn','err');
+  if (Number(val) === 0) elm.classList.add('ok');
+  else if (Math.abs(Number(val)) <= tol) elm.classList.add('warn');
+  else elm.classList.add('err');
 }
 function colorizeDiffs(){
   const store = el('store')?.value || 'International';
@@ -676,7 +685,7 @@ function validateForm(){
 // ===== Reset =====
 function resetAll(){
   // Clear text fields
-  ['cashierName','cashiersList','cashNumber'].forEach(id=>{ const x = el(id); if(x) x.value=''; });
+  ['cashierName','cashiersList','cashNumber','lostChangeCAD'].forEach(id=>{ const x = el(id); if(x) x.value=''; });
   // Reset date to today
   const d = new Date(); const dateEl = el('countDate'); if(dateEl) dateEl.valueAsDate = d;
   // Reset store dropdown to first option
@@ -685,7 +694,6 @@ function resetAll(){
   // Reset currencies & rows
   Object.keys(state.currencies).forEach(c=>{
     state.currencies[c].rows.forEach(r=>{ r.qty=0; r.total=0; });
-    // keep enabled state as toggled by user
   });
 
   // Clear deposits
@@ -697,6 +705,9 @@ function resetAll(){
     state.reportedByCurrency[cur]=0;
     const input = el(`reported${cur}`); if(input) input.value='';
   });
+
+  // Clear lost change
+  state.lostChange.CAD = 0;
 
   state.cardDifference = 0; const cardEl = el('cardDifference'); if(cardEl) cardEl.value='';
   state.cashNumber = "";
@@ -755,9 +766,14 @@ function exportCSV(){
   rows.push(['EUR', state.depositTotals.EUR.toFixed(2)]);
   rows.push([]);
 
+  // NEW: Lost change info
+  rows.push(['Lost Change (CAD < $5)', (state.lostChange.CAD || 0).toFixed(2)]);
+  rows.push([]);
+
   // Per-currency totals/diffs
   ['CAD','USD','EUR'].forEach(cur=>{
-    const counted = (state.denomTotals[cur] + state.depositTotals[cur]).toFixed(2);
+    const extra = (cur==='CAD') ? (state.lostChange.CAD || 0) : 0;
+    const counted = (state.denomTotals[cur] + state.depositTotals[cur] + extra).toFixed(2);
     rows.push([`${cur} Counted`, counted]);
     rows.push([`${cur} Reported (Z report)`, Number(state.reportedByCurrency[cur]||0).toFixed(2)]);
     rows.push([`${cur} Difference (Reported - Counted)`, state.diffsByCurrency[cur].toFixed(2)]);
@@ -772,7 +788,7 @@ function exportCSV(){
   rows.push([]);
   rows.push(['Denominations Total (All Currencies)', denomAll.toFixed(2)]);
   rows.push(['Deposits Total (All Currencies)', depositsAll.toFixed(2)]);
-  rows.push(['Counted Total (Denoms + Deposits)', state.countedTotal.toFixed(2)]);
+  rows.push(['Counted Total (Denoms + Deposits + CAD Lost Change)', state.countedTotal.toFixed(2)]);
   rows.push(['Reconciled Difference (CAD+USD+EUR)', state.reconciledDifference.toFixed(2)]);
 
   const csv = rows.map(r=> r.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -831,10 +847,14 @@ async function exportPDF(){
   }
   y += 6;
 
-  // Per-currency
+  // Lost Change (CAD)
   doc.setFontSize(12);
+  doc.text(`CAD Lost Change (< $5): ${fmt(state.lostChange.CAD || 0)}`, 10, y); y += 8;
+
+  // Per-currency
   ['CAD','USD','EUR'].forEach(cur=>{
-    const counted = state.denomTotals[cur] + state.depositTotals[cur];
+    const extra = cur === 'CAD' ? (state.lostChange.CAD || 0) : 0;
+    const counted = state.denomTotals[cur] + state.depositTotals[cur] + extra;
     doc.text(`${cur} Counted: ${fmt(counted)}`, 10, y); y += 6;
     doc.text(`${cur} Reported (Z report): ${fmt(state.reportedByCurrency[cur]||0)}`, 10, y); y += 6;
     doc.text(`${cur} Difference: ${fmt(state.diffsByCurrency[cur])}`, 10, y); y += 8;
@@ -848,7 +868,7 @@ async function exportPDF(){
   doc.text(`Card Difference (info only): ${fmt(state.cardDifference||0)}`, 10, y); y += 8;
   doc.text(`Denominations Total (All): ${fmt(denomAll)}`, 10, y); y += 6;
   doc.text(`Deposits Total (All): ${fmt(depositsAll)}`, 10, y); y += 6;
-  doc.text(`Counted Total: ${fmt(state.countedTotal)}`, 10, y); y += 6;
+  doc.text(`Counted Total: ${fmt(state.countedTotal)}  (includes CAD Lost Change)`, 10, y); y += 6;
   doc.text(`Reconciled Difference: ${fmt(state.reconciledDifference)}`, 10, y); y += 6;
 
   doc.save(filenameBase() + ".pdf");
