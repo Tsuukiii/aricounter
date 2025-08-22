@@ -6,15 +6,14 @@
   <title>MONTREAL DUTY FREE — Cash Counter</title>
 
   <!-- Styles -->
-  <link rel="stylesheet" href="styles.css?v=20250821-3" />
+  <link rel="stylesheet" href="styles.css?v=20250822" />
 
-  <!-- MSAL (Microsoft sign-in, PKCE). Safe to include now; feature is off until you enable it in app.js -->
+  <!-- MSAL (Microsoft sign-in, PKCE) -->
   <script src="https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <header class="app-header">
     <div class="branding-left">
-      <!-- Help (far left) -->
       <button id="helpBtn" class="btn ghost">Help</button>
 
       <div class="branding">
@@ -32,13 +31,11 @@
         <button id="langToggle" class="btn ghost">FR</button>
         <button id="printBtn" class="btn secondary">Print</button>
         <button id="openSharePointBtn" class="btn sharepoint">Open SharePoint Folder</button>
-        <!-- NEW: Share to SharePoint (shown only when enabled in app.js) -->
         <button id="shareToSPBtn" class="btn sharepoint">Share to SharePoint</button>
       </div>
     </div>
   </header>
 
-  <!-- Live region for small status/validation updates -->
   <div id="statusLive" class="sr-only" aria-live="polite"></div>
 
   <main class="container">
@@ -62,7 +59,7 @@
             <option>International</option>
             <option>Transborder</option>
             <option>Jetty</option>
-            <option>Value</option> <!-- matches SharePoint folder -->
+            <option>Value</option>
           </select>
         </label>
         <label class="field">
@@ -94,7 +91,6 @@
     <section class="card" aria-labelledby="totalsTitle">
       <h2 id="totalsTitle">Totals</h2>
       <div class="totals-grid">
-        <!-- CAD -->
         <div class="tot">
           <span>CAD Counted</span>
           <strong id="cadTotal">0.00</strong>
@@ -102,20 +98,16 @@
             <span>CAD Reported (Z report)</span>
             <input id="reportedCAD" type="number" step="0.01" placeholder="0.00" />
           </label>
-
-          <!-- Lost Change CAD -->
           <label class="field compact">
             <span>CAD Lost Change (&lt; $5)</span>
             <input id="lostChangeCAD" type="number" step="0.01" placeholder="0.00" />
           </label>
-
           <div class="field compact">
             <span>CAD Difference (Counted − Reported)</span>
             <strong id="cadDiff" class="diff">0.00</strong>
           </div>
         </div>
 
-        <!-- USD -->
         <div class="tot">
           <span>USD Counted</span>
           <strong id="usdTotal">0.00</strong>
@@ -129,7 +121,6 @@
           </div>
         </div>
 
-        <!-- EUR -->
         <div class="tot">
           <span>EUR Counted</span>
           <strong id="eurTotal">0.00</strong>
@@ -143,7 +134,6 @@
           </div>
         </div>
 
-        <!-- Card Difference (optional info) -->
         <div class="tot">
           <label class="field compact">
             <span>Card Difference (info only)</span>
@@ -151,7 +141,6 @@
           </label>
         </div>
 
-        <!-- Reconciled Difference -->
         <div class="tot">
           <span>Reconciled Difference (CAD + USD + EUR)</span>
           <strong id="recDiff" class="diff">0.00</strong>
@@ -159,7 +148,7 @@
       </div>
     </section>
 
-    <!-- Deposits (list with edit/delete) -->
+    <!-- Deposits -->
     <section class="card" aria-labelledby="depositsTitle">
       <div class="card-header">
         <h2 id="depositsTitle">Deposits</h2>
@@ -178,7 +167,6 @@
       <button id="openSharePointBtn2" class="btn sharepoint">Open SharePoint Folder</button>
     </section>
 
-    <!-- Sticky summary -->
     <div class="sticky-summary" aria-live="polite">
       <div><strong>Total Counted:</strong> <span id="summaryCounted">0.00</span></div>
       <div><strong>Reconciled Difference:</strong> <span id="summaryRecDiff">0.00</span></div>
@@ -186,10 +174,28 @@
   </main>
 
   <footer class="footer">
-    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype · v2025.08.21-SharePoint</small>
+    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype · v2025.08.22</small>
   </footer>
 
-  <!-- App -->
-  <script src="app.js?v=20250821-sp1"></script>
+  <script src="app.js?v=20250822"></script>
+  <!-- Help modal -->
+<div id="helpModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="helpTitle" aria-modal="true">
+  <div class="modal-backdrop" data-close="true"></div>
+  <div class="modal-panel" tabindex="-1">
+    <div class="modal-header">
+      <h3 id="helpTitle">How to use this app</h3>
+      <button id="helpClose" class="btn ghost" aria-label="Close">×</button>
+    </div>
+
+    <ol id="helpList" class="modal-body">
+      <!-- Content is injected from app.js (I18N.helpListHtml) -->
+    </ol>
+
+    <div class="modal-footer">
+      <button id="helpOk" class="btn primary">Got it</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

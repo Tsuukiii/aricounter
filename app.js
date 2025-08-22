@@ -36,6 +36,7 @@ function openSPForStore(){
 }
 
 /* ===== i18n (shortened for brevity) ===== */
+/* ===== i18n (EN + FR) ===== */
 const I18N = {
   en: {
     sessionInfo: "Session Info",
@@ -79,9 +80,85 @@ const I18N = {
     errDateFuture: "Date cannot be in the future.",
     errQtyRange: "Quantity must be between 0 and 10,000."
   },
-  fr: { /* (you can fill FR strings later if needed) */ }
+  fr: {
+    sessionInfo: "Infos de session",
+    headCashier: "Nom du chef caissier/gestionnaire",
+    date: "Date",
+    store: "Magasin",
+    cashiers: "Caissiers (ayant utilisé la caisse)",
+    cashNumber: "Numéro de caisse",
+    denominations: "Dénominations",
+    totals: "Totaux",
+    btnPrint: "Imprimer",
+    btnDeposit: "+ Dépôt",
+    btnReset: "Réinitialiser",
+    btnCSV: "Exporter CSV",
+    btnPDF: "Exporter PDF",
+    statusCSV: "CSV exporté.",
+    statusPDF: "PDF exporté.",
+    helpTitle: "Comment utiliser l’application",
+    helpOk: "Compris",
+    helpListHtml: `
+      <li><strong>Infos de session :</strong> Indiquez votre nom, la date, le magasin, les caissiers et le numéro de caisse.</li>
+      <li><strong>Devises :</strong> Activez CAD / USD / EUR à compter.</li>
+      <li><strong>Comptage :</strong> Entrez les quantités par dénomination. Les totaux se mettent à jour automatiquement.</li>
+      <li><strong>Déclaré :</strong> Saisissez les montants du rapport Z par devise.</li>
+      <li><strong>Écarts :</strong> Vérifiez les différences (<strong>compté − déclaré</strong>).</li>
+      <li><strong>Dépôts :</strong> Utilisez « + Dépôt » pour enregistrer des dépôts. Vous pouvez les modifier/supprimer.</li>
+      <li><strong>Export :</strong> Utilisez « Exporter CSV » ou « Exporter PDF ».</li>
+      <li><strong>SharePoint :</strong> Cliquez « Partager vers SharePoint » pour enregistrer dans /Magasin/AAAA-MM-JJ/ (si activé).</li>
+    `,
+    depTitle: "Ajouter un dépôt",
+    depCAD: "Montant CAD",
+    depUSD: "Montant USD",
+    depEUR: "Montant EUR",
+    depNote: "Note facultative (ex. dépôt midi, sac #)",
+    depSave: "Enregistrer",
+    invalidAmount: "Montant invalide",
+    depositAdded: "Dépôt ajouté.",
+    depositUpdated: "Dépôt mis à jour.",
+    confirmDelete: "Supprimer ce dépôt ?",
+    errName: "Veuillez entrer votre nom.",
+    errDateFuture: "La date ne peut pas être dans le futur.",
+    errQtyRange: "La quantité doit être entre 0 et 10 000."
+  }
 };
 let currentLang = "en";
+
+/* ===== Language ===== */
+function applyLanguage(lang){
+  currentLang = lang;
+  // Merge: fallback to EN for any missing keys
+  const t = Object.assign({}, I18N.en, I18N[lang] || {});
+
+  setButtonText('printBtn', t.btnPrint);
+  setButtonText('depositBtn', t.btnDeposit);
+  setButtonText('resetBtn', t.btnReset);
+  setButtonText('exportCsvBtn', t.btnCSV);
+  setButtonText('exportPdfBtn', t.btnPDF);
+  setButtonText('langToggle', lang === 'en' ? 'FR' : 'EN');
+
+  setLabelForInput('cashierName', t.headCashier);
+  setLabelForInput('countDate', t.date);
+  setLabelForInput('store', t.store);
+  setLabelForInput('cashiersList', t.cashiers);
+  setLabelForInput('cashNumber', t.cashNumber);
+
+  document.querySelectorAll('main .card h2').forEach(h=>{
+    const text = h.textContent.trim().toLowerCase();
+    if(text.includes('session info') || text.includes('infos de session')) h.textContent = t.sessionInfo;
+    else if(text.includes('denominations') || text.includes('dénominations')) h.textContent = t.denominations;
+    else if(text.includes('totals') || text.includes('totaux')) h.textContent = t.totals;
+    else if(text.includes('deposits') || text.includes('dépôts')) h.textContent = (lang==='en' ? 'Deposits' : 'Dépôts');
+  });
+
+  setText('helpTitle', t.helpTitle || I18N.en.helpTitle);
+  setHTML('helpList', t.helpListHtml || I18N.en.helpListHtml);
+  setButtonText('helpOk', t.helpOk || I18N.en.helpOk);
+
+  validateForm();
+}
+
 
 /* ===== Per-store variance thresholds ===== */
 const STORE_TOLERANCE = { International:2, Transborder:2, Jetty:1, Value:1 };
