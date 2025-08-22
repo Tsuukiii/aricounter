@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONTREAL DUTY FREE — Cash Counter</title>
 
-  <!-- Cache-busted assets -->
-  <link rel="stylesheet" href="styles.css?v=20250814-6" />
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css?v=20250821-3" />
+
+  <!-- MSAL (Microsoft sign-in, PKCE). Safe to include now; feature is off until you enable it in app.js -->
+  <script src="https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <header class="app-header">
@@ -29,6 +32,8 @@
         <button id="langToggle" class="btn ghost">FR</button>
         <button id="printBtn" class="btn secondary">Print</button>
         <button id="openSharePointBtn" class="btn sharepoint">Open SharePoint Folder</button>
+        <!-- NEW: Share to SharePoint (shown only when enabled in app.js) -->
+        <button id="shareToSPBtn" class="btn sharepoint">Share to SharePoint</button>
       </div>
     </div>
   </header>
@@ -181,61 +186,10 @@
   </main>
 
   <footer class="footer">
-    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype · v2025.08.21</small>
+    <small>© <span id="year"></span> MONTREAL DUTY FREE — Internal tool prototype · v2025.08.21-SharePoint</small>
   </footer>
 
-  <!-- Help Modal -->
-  <div id="helpModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="helpTitle" aria-modal="true">
-    <div class="modal-backdrop" data-close="true"></div>
-    <div class="modal-panel" role="document" tabindex="-1">
-      <header class="modal-header">
-        <h3 id="helpTitle">How to use this app</h3>
-        <button id="helpClose" class="btn ghost small" aria-label="Close help">✕</button>
-      </header>
-      <div class="modal-body">
-        <ol id="helpList" class="help-steps"></ol>
-      </div>
-      <footer class="modal-footer">
-        <button id="helpOk" class="btn primary">Got it</button>
-      </footer>
-    </div>
-  </div>
-
-  <!-- Deposit Modal (create/edit) -->
-  <div id="depositModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="depositTitle" aria-modal="true">
-    <div class="modal-backdrop" data-close="true"></div>
-    <div class="modal-panel" role="document" tabindex="-1">
-      <header class="modal-header">
-        <h3 id="depositTitle">Add Deposit</h3>
-        <button id="depositClose" class="btn ghost small" aria-label="Close deposit">✕</button>
-      </header>
-      <div class="modal-body">
-        <div class="grid">
-          <label class="field">
-            <span id="lblDepCAD">CAD amount</span>
-            <input id="depCAD" type="number" step="0.01" placeholder="0.00" />
-          </label>
-          <label class="field">
-            <span id="lblDepUSD">USD amount</span>
-            <input id="depUSD" type="number" step="0.01" placeholder="0.00" />
-          </label>
-          <label class="field">
-            <span id="lblDepEUR">EUR amount</span>
-            <input id="depEUR" type="number" step="0.01" placeholder="0.00" />
-          </label>
-          <label class="field" style="grid-column:1/-1">
-            <span id="lblDepNote">Optional note (e.g., Mid-day drop, bag #)</span>
-            <input id="depNote" type="text" placeholder="Note" />
-          </label>
-        </div>
-      </div>
-      <footer class="modal-footer">
-        <button id="depositSave" class="btn primary">Save</button>
-      </footer>
-    </div>
-  </div>
-
-  <!-- Cache-busted JS -->
-  <script src="app.js?v=20250821-1"></script>
+  <!-- App -->
+  <script src="app.js?v=20250821-sp1"></script>
 </body>
 </html>
