@@ -62,7 +62,7 @@ const I18N = {
       <li><strong>Currencies:</strong> Toggle CAD / USD / EUR you will count.</li>
       <li><strong>Count:</strong> Enter <em>quantities</em> for each denomination. Totals update automatically.</li>
       <li><strong>Reported totals:</strong> Enter Z-report values per currency.</li>
-      <li><strong>Review variance:</strong> Check differences (reported − counted).</li>
+      <li><strong>Review variance:</strong> Check differences (<strong>counted − reported</strong>).</li>
       <li><strong>Deposits:</strong> Use “+ Deposit” to record drops. You can edit/delete them later.</li>
       <li><strong>Export:</strong> Use “Export CSV” or “Export PDF”.</li>
       <li><strong>SharePoint:</strong> Click “Open SharePoint Folder” to upload the file.</li>
@@ -109,7 +109,7 @@ const I18N = {
       <li><strong>Devises :</strong> Activez CAD / USD / EUR à compter.</li>
       <li><strong>Comptage :</strong> Entrez les <em>quantités</em> par dénomination. Totaux mis à jour automatiquement.</li>
       <li><strong>Déclaré :</strong> Saisissez les montants du rapport Z par devise.</li>
-      <li><strong>Écarts :</strong> Vérifiez les différences (déclaré − compté).</li>
+      <li><strong>Écarts :</strong> Vérifiez les différences (<strong>compté − déclaré</strong>).</li>
       <li><strong>Dépôts :</strong> Utilisez « + Dépôt » pour enregistrer des dépôts. Vous pouvez les modifier/supprimer.</li>
       <li><strong>Export :</strong> Utilisez « Exporter CSV » ou « Exporter PDF ».</li>
       <li><strong>SharePoint :</strong> Cliquez « Ouvrir le dossier SharePoint » pour téléverser le fichier.</li>
@@ -152,7 +152,7 @@ const state = {
   },
   denomTotals: { CAD:0, USD:0, EUR:0 },
   depositTotals: { CAD:0, USD:0, EUR:0 },
-  // NEW: manual lost change under $5 for CAD only
+  // manual lost change under $5 for CAD only
   lostChange: { CAD: 0 },
   deposits: [], // {currency, amount, note, time}
   reportedByCurrency: { CAD:0, USD:0, EUR:0 },
@@ -196,15 +196,23 @@ function init(){
   // Per-currency reported
   ['CAD','USD','EUR'].forEach(cur=>{
     const r = el(`reported${cur}`);
-    if(r) r.addEventListener('input', (e)=>{ state.reportedByCurrency[cur] = Number(e.target.value||0); calcTotals(); colorizeDiffs(); validateForm(); });
+    if(r) r.addEventListener('input', (e)=>{
+      state.reportedByCurrency[cur] = Number(e.target.value||0);
+      calcTotals(); colorizeDiffs(); validateForm();
+    });
   });
 
-  // NEW: Lost Change CAD listener
+  // Re-validate when Name/Date change (enables Export immediately)
+  el('cashierName')?.addEventListener('input', validateForm);
+  ['change','input'].forEach(evt => el('countDate')?.addEventListener(evt, validateForm));
+
+  // Lost Change CAD listener
   const lcCAD = el('lostChangeCAD');
   if (lcCAD) lcCAD.addEventListener('input', e => {
     state.lostChange.CAD = Number(e.target.value || 0);
     calcTotals();
     colorizeDiffs();
+    validateForm();
   });
 
   // Card diff & cash number
@@ -441,9 +449,9 @@ function calcTotals(){
     EUR: state.denomTotals.EUR + state.depositTotals.EUR
   };
 
-  // Per-currency diffs (reported - counted)
+  // >>> Flipped sign: per-currency diffs (counted - reported)
   ['CAD','USD','EUR'].forEach(cur=>{
-    state.diffsByCurrency[cur] = Number(state.reportedByCurrency[cur]||0) - countedByCur[cur];
+    state.diffsByCurrency[cur] = countedByCur[cur] - Number(state.reportedByCurrency[cur]||0);
   });
 
   state.countedTotal = countedByCur.CAD + countedByCur.USD + countedByCur.EUR;
@@ -766,7 +774,7 @@ function exportCSV(){
   rows.push(['EUR', state.depositTotals.EUR.toFixed(2)]);
   rows.push([]);
 
-  // NEW: Lost change info
+  // Lost change info
   rows.push(['Lost Change (CAD < $5)', (state.lostChange.CAD || 0).toFixed(2)]);
   rows.push([]);
 
@@ -776,7 +784,7 @@ function exportCSV(){
     const counted = (state.denomTotals[cur] + state.depositTotals[cur] + extra).toFixed(2);
     rows.push([`${cur} Counted`, counted]);
     rows.push([`${cur} Reported (Z report)`, Number(state.reportedByCurrency[cur]||0).toFixed(2)]);
-    rows.push([`${cur} Difference (Reported - Counted)`, state.diffsByCurrency[cur].toFixed(2)]);
+    rows.push([`${cur} Difference (Counted - Reported)`, state.diffsByCurrency[cur].toFixed(2)]);
     rows.push([]);
   });
 
@@ -851,13 +859,13 @@ async function exportPDF(){
   doc.setFontSize(12);
   doc.text(`CAD Lost Change (< $5): ${fmt(state.lostChange.CAD || 0)}`, 10, y); y += 8;
 
-  // Per-currency
+  // Per-currency (Counted - Reported)
   ['CAD','USD','EUR'].forEach(cur=>{
     const extra = cur === 'CAD' ? (state.lostChange.CAD || 0) : 0;
     const counted = state.denomTotals[cur] + state.depositTotals[cur] + extra;
     doc.text(`${cur} Counted: ${fmt(counted)}`, 10, y); y += 6;
     doc.text(`${cur} Reported (Z report): ${fmt(state.reportedByCurrency[cur]||0)}`, 10, y); y += 6;
-    doc.text(`${cur} Difference: ${fmt(state.diffsByCurrency[cur])}`, 10, y); y += 8;
+    doc.text(`${cur} Difference (Counted - Reported): ${fmt(state.diffsByCurrency[cur])}`, 10, y); y += 8;
     if(y > 280){ doc.addPage(); y = 10; }
   });
 
