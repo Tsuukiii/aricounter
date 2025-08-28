@@ -1,8 +1,4 @@
-/* =========================
-   MONTREAL DUTY FREE — Cash Counter
-   - Diff = Counted - Reported (fixed)
-   - Share to SharePoint (MSAL + Graph) with feature flag
-   ========================= */
+
 
 /* ===== Helpers ===== */
 function fmt(n){ return (Number(n||0)).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
