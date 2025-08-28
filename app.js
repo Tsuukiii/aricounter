@@ -1,5 +1,3 @@
-
-
 /* ===== Helpers ===== */
 function fmt(n){ return (Number(n||0)).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function el(id){ return document.getElementById(id); }
@@ -31,7 +29,6 @@ function openSPForStore(){
   window.open(url, '_blank', 'noopener');
 }
 
-/* ===== i18n (shortened for brevity) ===== */
 /* ===== i18n (EN + FR) ===== */
 const I18N = {
   en: {
@@ -155,7 +152,6 @@ function applyLanguage(lang){
   validateForm();
 }
 
-
 /* ===== Per-store variance thresholds ===== */
 const STORE_TOLERANCE = { International:2, Transborder:2, Jetty:1, Value:1 };
 
@@ -237,6 +233,7 @@ async function getGraphToken() {
 
 async function graphFetch(path, init={}) {
   const token = await getGraphToken();
+  // NOTE: use template string for Authorization header value
   const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
     ...init,
     headers: { "Authorization": `Bearer ${token}`, ...(init.headers || {}) }
@@ -455,7 +452,47 @@ function colorizeDiffs(){
 let lastFocusHelp = null, lastFocusDeposit = null;
 let editingIndex = null; // null = creating new
 
+// Ensure deposit modal exists in DOM and wire its buttons (idempotent)
+function ensureDepositModalExists(){
+  if (el('depositModal')) return; // already exists
+  const modal = document.createElement('div');
+  modal.id = 'depositModal';
+  modal.className = 'modal';
+  modal.setAttribute('aria-hidden','true');
+  modal.setAttribute('role','dialog');
+  modal.innerHTML = `
+    <div class="modal-backdrop" data-close="true"></div>
+    <div class="modal-panel" tabindex="-1" role="document">
+      <div class="modal-header">
+        <h3 id="depositTitle">${I18N[currentLang].depTitle}</h3>
+        <button id="depositClose" class="btn ghost" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="field"><span>${I18N[currentLang].depCAD}</span><input id="depCAD" type="number" step="0.01" placeholder="0.00"></label>
+        <label class="field"><span>${I18N[currentLang].depUSD}</span><input id="depUSD" type="number" step="0.01" placeholder="0.00"></label>
+        <label class="field"><span>${I18N[currentLang].depEUR}</span><input id="depEUR" type="number" step="0.01" placeholder="0.00"></label>
+        <label class="field"><span>${I18N[currentLang].depNote}</span><input id="depNote" type="text" placeholder=""></label>
+      </div>
+      <div class="modal-footer">
+        <button id="depositSave" class="btn primary">${I18N[currentLang].depSave}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Backdrop/close wiring
+  modal.querySelector('.modal-backdrop')?.addEventListener('click', ()=>{ closeDeposit(); });
+  el('depositClose')?.addEventListener('click', ()=>{ closeDeposit(); });
+
+  // Save wiring
+  el('depositSave')?.addEventListener('click', ()=>{ saveDeposit(); });
+
+  // Allow clicking outside and data-close attribute
+  modal.addEventListener('click', (e)=>{ if (e.target && e.target.matches('[data-close="true"]')) closeDeposit(); });
+}
+
 function openDeposit(editIdx=null){
+  ensureDepositModalExists();
   const m = el('depositModal'); if(!m) return;
   editingIndex = editIdx;
   ['depCAD','depUSD','depEUR','depNote'].forEach(id=>{ const x = el(id); if(x) x.value=''; });
@@ -591,6 +628,10 @@ function filenameBase(){
   return `MONTREAL_DUTY_FREE_${store}_${date}_${name}${cashSuffix}`;
 }
 
+function csvEscape(v){
+  return '"' + String(v === undefined || v === null ? '' : v).replace(/"/g,'""') + '"';
+}
+
 function buildCSVString(){
   const rows = [];
   rows.push(['Company','MONTREAL DUTY FREE']);
@@ -645,7 +686,7 @@ function buildCSVString(){
   rows.push(['Counted Total (Denoms + Deposits + CAD Lost Change)', state.countedTotal.toFixed(2)]);
   rows.push(['Reconciled Difference (CAD+USD+EUR)', state.reconciledDifference.toFixed(2)]);
 
-  return rows.map(r=> r.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  return rows.map(r=> r.map(v=> csvEscape(v)).join(',')).join('\n');
 }
 
 function exportCSV(){
@@ -657,7 +698,7 @@ function exportCSV(){
   link.click();
 }
 
-/* ===== PDF Export (as before; lazy-load jsPDF) ===== */
+/* ===== PDF Export (lazy-load jsPDF) ===== */
 async function exportPDF(){
   if(!window.jspdf){
     await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -768,8 +809,7 @@ function init(){
   const savedHC = localStorage.getItem('hc') === '1';
   if (savedHC) { document.body.classList.add('hc'); el('contrastToggle')?.setAttribute('aria-pressed','true'); }
   el('contrastToggle')?.addEventListener('click', ()=>{
-    const isOn = !document.body.classList.toggle('hc'); // toggle returns new state reversed
-    const nowOn = document.body.classList.contains('hc');
+    const nowOn = document.body.classList.toggle('hc');
     el('contrastToggle').setAttribute('aria-pressed', nowOn ? 'true':'false');
     localStorage.setItem('hc', nowOn ? '1' : '0');
   });
@@ -818,10 +858,11 @@ function init(){
   el('helpOk')?.addEventListener('click', closeHelp);
   el('helpClose')?.addEventListener('click', closeHelp);
 
-  // Deposit modal
+  // Ensure deposit modal exists and wire its handlers
+  ensureDepositModalExists();
+
+  // Deposit modal open button
   el('depositBtn')?.addEventListener('click', ()=>openDeposit());
-  el('depositSave')?.addEventListener('click', saveDeposit);
-  el('depositClose')?.addEventListener('click', closeDeposit);
 
   // Global clicks: close modals / menus
   document.addEventListener('click', (e)=>{
@@ -856,38 +897,7 @@ function init(){
   }
 }
 
-/* ===== Language ===== */
-function applyLanguage(lang){
-  currentLang = lang;
-  const t = I18N[lang] || I18N.en;
-
-  setButtonText('printBtn', t.btnPrint);
-  setButtonText('depositBtn', t.btnDeposit);
-  setButtonText('resetBtn', t.btnReset);
-  setButtonText('exportCsvBtn', t.btnCSV);
-  setButtonText('exportPdfBtn', t.btnPDF);
-  setButtonText('langToggle', lang === 'en' ? 'FR' : 'EN');
-
-  setLabelForInput('cashierName', t.headCashier);
-  setLabelForInput('countDate', t.date);
-  setLabelForInput('store', t.store);
-  setLabelForInput('cashiersList', t.cashiers);
-  setLabelForInput('cashNumber', t.cashNumber);
-
-  document.querySelectorAll('main .card h2').forEach(h=>{
-    const text = h.textContent.trim().toLowerCase();
-    if(text.includes('session info') || text.includes('infos de session')) h.textContent = t.sessionInfo;
-    else if(text.includes('denominations') || text.includes('dénominations')) h.textContent = t.denominations;
-    else if(text.includes('totals') || text.includes('totaux')) h.textContent = t.totals;
-    else if(text.includes('deposits') || text.includes('dépôts')) h.textContent = lang==='en' ? 'Deposits' : 'Dépôts';
-  });
-
-  setText('helpTitle', t.helpTitle);
-  setHTML('helpList', t.helpListHtml);
-  setButtonText('helpOk', t.helpOk);
-
-  validateForm();
-}
+/* ===== DOM helpers used by language functions ===== */
 function setLabelForInput(inputId, text){
   const input = el(inputId);
   if(!input) return;
